@@ -213,3 +213,48 @@ body {
 
 .loading { text-align: center; color: var(--text2); padding: 40px 20px; font-size: 14px; }
 .empty { text-align: center; color: var(--text3); padding: 40px 20px; font-size: 14px; }
+
+/* Exercise card edit button */
+.ex-header { display: flex; justify-content: space-between; align-items: center; }
+.ex-edit-btn {
+  background: none; border: none; font-size: 15px; cursor: pointer;
+  padding: 4px 6px; border-radius: 8px; opacity: 0.5;
+}
+.ex-edit-btn:active { opacity: 1; background: var(--surface2); }
+
+/* Modal overlay + bottom sheet */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0); transition: background 0.25s;
+  display: flex; align-items: flex-end;
+}
+.modal-overlay.open { background: rgba(0,0,0,0.6); }
+.modal-sheet {
+  width: 100%; background: var(--surface);
+  border-radius: 24px 24px 0 0; padding: 12px 20px 36px;
+  transform: translateY(100%); transition: transform 0.25s ease;
+}
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+.modal-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--border); margin: 0 auto 20px;
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.modal-label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
+.modal-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; font-size: 16px; color: var(--text);
+  margin-bottom: 16px; -webkit-appearance: none;
+}
+.modal-input:focus { outline: none; border-color: var(--accent); }
+.modal-row { display: flex; gap: 10px; }
+.modal-row > div { flex: 1; }
+.btn-primary {
+  width: 100%; background: var(--accent); border: none;
+  border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700; color: #0f0f0f;
+  cursor: pointer; margin-bottom: 10px;
+}
+.btn-cancel {
+  width: 100%; background: none; border: none;
+  padding: 12px; font-size: 15px; color: var(--text2); cursor: pointer;
+}
