@@ -173,6 +173,23 @@ function renderFoodSection(today) {
   });
 }
 
+function compressImage(file, maxPx = 1024) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
+    };
+    img.src = url;
+  });
+}
+
 function bindFoodForm(today) {
   document.getElementById('camera-btn').addEventListener('click', () => {
     document.getElementById('food-image-input').click();
@@ -186,16 +203,13 @@ function bindFoodForm(today) {
     btn.disabled = true;
     btn.textContent = '🔄 AI 辨識中...';
     status.style.display = 'block';
-    status.textContent = '正在分析食物圖片...';
-
-    const base64 = await new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = ev => resolve(ev.target.result.split(',')[1]);
-      reader.readAsDataURL(file);
-    });
+    status.textContent = '壓縮圖片並送出辨識...';
 
     try {
-      const result = await api.recognizeFood({imageBase64: base64, mimeType: file.type});
+      const base64 = await compressImage(file);
+      status.textContent = '正在分析食物圖片...';
+      const result = await api.recognizeFood({imageBase64: base64, mimeType: 'image/jpeg'});
+      if (result.error) throw new Error(result.error);
       if (result.description) document.getElementById('food-desc').value = result.description;
       if (result.calories) document.getElementById('food-cal').value = result.calories;
       if (result.protein) document.getElementById('food-protein').value = result.protein;
@@ -203,9 +217,12 @@ function bindFoodForm(today) {
       if (result.fat) document.getElementById('food-fat').value = result.fat;
       btn.textContent = '✅ 辨識完成';
       status.textContent = '數據已填入，請確認後送出';
-    } catch {
+    } catch (err) {
       btn.textContent = '📷 重新拍照';
-      status.textContent = '❌ 辨識失敗，請手動輸入';
+      const msg = err.message || '';
+      status.textContent = msg.includes('GEMINI_API_KEY')
+        ? '❌ 尚未設定 Gemini API Key（見 Apps Script Script Properties）'
+        : `❌ 辨識失敗：${msg || '請手動輸入'}`;
     }
     btn.disabled = false;
   });
