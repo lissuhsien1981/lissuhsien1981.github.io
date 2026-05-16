@@ -1,7 +1,7 @@
 // sw.js
-const CACHE = 'fitcoach-v6';
+const CACHE = 'fitcoach-v7';
 const STATIC = [
-  '/', '/index.html', '/css/app.css', '/manifest.json', '/config.js',
+  '/css/app.css', '/manifest.json', '/config.js',
   '/js/app.js', '/js/api.js', '/js/storage.js',
   '/js/screens/today.js', '/js/screens/log.js', '/js/screens/stats.js', '/js/screens/profile.js',
   '/js/components/timer.js', '/js/components/numpad.js'
@@ -24,6 +24,11 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request).catch(() =>
       new Response('[]', {headers: {'Content-Type': 'application/json'}})
     ));
+    return;
+  }
+  // Never cache HTML — always fetch fresh so viewport meta is up-to-date
+  if (e.request.destination === 'document') {
+    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html')));
     return;
   }
   e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request)));
