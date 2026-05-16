@@ -1,5 +1,44 @@
-const SHEET_ID = 'YOUR_SHEET_ID_HERE';
+const SHEET_ID = '1bOALXfJiVJotOzz34MFrVMn6r7e45u__P-cStSS6F0U';
 const SECRET = 'fitcoach-secret-2026';
+
+// ─── RUN THIS ONCE TO SET UP ALL SHEETS ───────────────────────────────────
+function setupSheets() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+
+  const sheets = [
+    {name: 'Training Plan', headers: ['Week','Day','Exercise','Sets','Reps','WeightTarget','Notes']},
+    {name: 'Workout Log',   headers: ['Date','DayType','Exercise','SetNum','Weight','Reps','ExtraSet','Notes']},
+    {name: 'Body Metrics',  headers: ['Date','Weight','BodyFat','Notes']},
+    {name: 'Food Log',      headers: ['Date','Meal','Description','Calories','Protein','Carbs','Fat','WaterIntake']},
+    {name: 'Apple Watch',   headers: ['Date','WorkoutType','Duration','Calories','AvgHR','MaxHR','SleepDuration','SleepQuality']}
+  ];
+
+  sheets.forEach(({name, headers}) => {
+    let sheet = ss.getSheetByName(name);
+    if (!sheet) sheet = ss.insertSheet(name);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+  });
+
+  // Remove default sheet if still there
+  ['Sheet1','工作表1'].forEach(n => {
+    const s = ss.getSheetByName(n);
+    if (s && ss.getSheets().length > 1) ss.deleteSheet(s);
+  });
+
+  // Add sample Monday workout
+  const plan = ss.getSheetByName('Training Plan');
+  if (plan.getLastRow() < 2) {
+    plan.getRange(2, 1, 5, 7).setValues([
+      [1,'Monday','Squat 深蹲',4,8,60,'恢復期，專注技術'],
+      [1,'Monday','Leg Press 腿推',4,12,100,''],
+      [1,'Monday','RDL 羅馬尼亞硬舉',3,10,50,''],
+      [1,'Monday','Leg Curl 腿彎舉',3,15,0,''],
+      [1,'Monday','Leg Extension 腿伸展',3,15,0,'']
+    ]);
+  }
+
+  Logger.log('✅ Setup complete!');
+}
 
 function doGet(e) {
   if (e.parameter.token !== SECRET) return json({error: 'Unauthorized'});
