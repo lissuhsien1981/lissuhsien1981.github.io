@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>FitCoach</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app">
+    <div class="screen" id="screen-today" data-screen="today"></div>
+    <div class="screen" id="screen-log" data-screen="log"></div>
+    <div class="screen" id="screen-stats" data-screen="stats"></div>
+    <div class="screen" id="screen-profile" data-screen="profile"></div>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-target="today">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">課表</span>
+      </button>
+      <button class="nav-item" data-target="log">
+        <span class="nav-icon">⚡</span>
+        <span class="nav-label">記錄</span>
+      </button>
+      <button class="nav-item" data-target="stats">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">進度</span>
+      </button>
+      <button class="nav-item" data-target="profile">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">設定</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="config.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
