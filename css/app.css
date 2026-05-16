@@ -36,7 +36,7 @@ body {
 .screen.active { display: flex; }
 .screen::-webkit-scrollbar { display: none; }
 
-.header { padding: calc(env(safe-area-inset-top, 20px) + 20px) 20px 12px; }
+.header { padding: calc(env(safe-area-inset-top, 44px) + 4px) 20px 8px; }
 .header-sub { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
 .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
 .header-meta { font-size: 13px; color: var(--text2); margin-top: 4px; }
@@ -87,7 +87,7 @@ body {
 }
 
 .today-banner {
-  margin: 0 20px 16px;
+  margin: 10px 20px 16px;
   background: var(--accent); border-radius: 16px;
   padding: 16px 18px;
   display: flex; justify-content: space-between; align-items: center;
