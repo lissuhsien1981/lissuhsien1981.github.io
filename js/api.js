@@ -24,5 +24,7 @@ export const api = {
   getHistory: () => apiFetch({action: 'getHistory'}),
   logSet: (data) => apiPost({action: 'logSet', ...data}),
   logBody: (data) => apiPost({action: 'logBody', ...data}),
-  logFood: (data) => apiPost({action: 'logFood', ...data})
+  logFood: (data) => apiPost({action: 'logFood', ...data}),
+  getTodayFood: (date) => apiFetch({action: 'getTodayFood', date}),
+  recognizeFood: (data) => apiPost({action: 'recognizeFoodImage', ...data})
 };

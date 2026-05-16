@@ -275,3 +275,75 @@ body {
   width: 100%; background: none; border: none;
   padding: 12px; font-size: 15px; color: var(--text2); cursor: pointer;
 }
+
+/* ── Stats/Food Tab Bar ───────────────────────────────────────────────────── */
+.stats-tab-bar {
+  display: flex; gap: 8px; padding: 0 20px 16px; margin-top: -4px;
+}
+.stats-tab-btn {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 8px; font-size: 13px; font-weight: 600;
+  color: var(--text2); cursor: pointer;
+}
+.stats-tab-btn.active {
+  background: var(--accent-dim); border-color: var(--accent); color: var(--accent);
+}
+
+/* ── Food Section ─────────────────────────────────────────────────────────── */
+.food-date-bar {
+  margin: 0 20px 12px; font-size: 12px; font-weight: 700;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em;
+}
+.food-entry-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+}
+.food-entry-left { display: flex; flex-direction: column; gap: 3px; }
+.meal-badge {
+  font-size: 11px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.food-entry-desc { font-size: 15px; color: var(--text); }
+.food-entry-cal { font-size: 14px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+
+.food-totals-card {
+  margin: 12px 20px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+}
+.food-totals-row { display: flex; gap: 0; }
+.food-total-item {
+  flex: 1; text-align: center; border-right: 1px solid var(--border);
+}
+.food-total-item:last-child { border-right: none; }
+.food-total-item.accent .food-total-val { color: var(--accent); }
+.food-total-val { font-size: 18px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.food-total-label { font-size: 10px; font-weight: 700; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+.food-water-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text2); text-align: center; }
+
+/* ── Food Form ────────────────────────────────────────────────────────────── */
+.food-form-row { margin-bottom: 14px; }
+.food-form-label { display: block; font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.food-input {
+  width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; font-size: 16px; color: var(--text);
+  -webkit-appearance: none;
+}
+.food-input:focus { outline: none; border-color: var(--accent); }
+.food-select {
+  width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; font-size: 16px; color: var(--text);
+  -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.btn-camera {
+  width: 100%; background: var(--surface2); border: 1.5px dashed var(--border);
+  border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600;
+  color: var(--text2); cursor: pointer; margin-bottom: 14px;
+}
+.btn-camera:active { border-color: var(--accent); color: var(--accent); }
+.ai-status-msg { font-size: 13px; color: var(--text2); padding: 0 0 12px; text-align: center; }
+.macro-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.macro-input-group { display: flex; flex-direction: column; }
+.macro-span2 { grid-column: span 2; }

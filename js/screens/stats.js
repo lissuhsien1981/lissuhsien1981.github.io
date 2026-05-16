@@ -1,22 +1,246 @@
 // js/screens/stats.js
 import {api} from '../api.js';
 
+let activeTab = 'stats';
+let todayFoodEntries = [];
+
 export function initStats(container) {
+  const today = new Date().toISOString().split('T')[0];
+
   container.innerHTML = `
     <div class="header">
       <div class="header-sub">本月概覽</div>
       <h1>進度</h1>
     </div>
-    <div id="stats-content"><div class="loading">載入中...</div></div>
-    <div id="history-section"></div>
+    <div class="stats-tab-bar">
+      <button class="stats-tab-btn ${activeTab === 'stats' ? 'active' : ''}" data-tab="stats">📊 訓練進度</button>
+      <button class="stats-tab-btn ${activeTab === 'food' ? 'active' : ''}" data-tab="food">🥗 飲食記錄</button>
+    </div>
+    <div id="tab-stats-content" style="display:${activeTab === 'stats' ? 'block' : 'none'}">
+      <div id="stats-content"><div class="loading">載入中...</div></div>
+      <div id="history-section"></div>
+    </div>
+    <div id="tab-food-content" style="display:${activeTab === 'food' ? 'block' : 'none'}">
+      <div id="food-section"></div>
+    </div>
   `;
+
+  container.querySelectorAll('.stats-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab;
+      container.querySelectorAll('.stats-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === activeTab));
+      document.getElementById('tab-stats-content').style.display = activeTab === 'stats' ? 'block' : 'none';
+      document.getElementById('tab-food-content').style.display = activeTab === 'food' ? 'block' : 'none';
+    });
+  });
 
   api.getStats().then(data => renderStats(data)).catch(() => {
     document.getElementById('stats-content').innerHTML = '<div class="empty">無法載入資料</div>';
   });
-
   api.getHistory().then(history => renderHistory(history)).catch(() => {});
+
+  loadFoodSection(today);
 }
+
+// ── Food Tab ──────────────────────────────────────────────────────────────
+
+function loadFoodSection(today) {
+  const section = document.getElementById('food-section');
+  if (!section) return;
+  section.innerHTML = '<div class="loading">載入中...</div>';
+  api.getTodayFood(today).then(entries => {
+    todayFoodEntries = entries || [];
+    renderFoodSection(today);
+  }).catch(() => {
+    todayFoodEntries = [];
+    renderFoodSection(today);
+  });
+}
+
+function renderFoodSection(today) {
+  const section = document.getElementById('food-section');
+  if (!section) return;
+
+  const totals = todayFoodEntries.reduce((acc, e) => ({
+    calories: acc.calories + (Number(e.calories) || 0),
+    protein: acc.protein + (Number(e.protein) || 0),
+    carbs: acc.carbs + (Number(e.carbs) || 0),
+    fat: acc.fat + (Number(e.fat) || 0),
+    water: acc.water + (Number(e.waterIntake) || 0)
+  }), {calories: 0, protein: 0, carbs: 0, fat: 0, water: 0});
+
+  const mealIcon = {早餐: '🌅', 午餐: '☀️', 晚餐: '🌙', 點心: '🍎', 消夜: '🌛'};
+
+  section.innerHTML = `
+    <div class="food-date-bar">${today}</div>
+
+    ${todayFoodEntries.length === 0
+      ? '<div class="empty">今天還沒有飲食記錄</div>'
+      : todayFoodEntries.map(e => `
+          <div class="food-entry-row">
+            <div class="food-entry-left">
+              <span class="meal-badge">${mealIcon[e.meal] || '🍽️'} ${e.meal}</span>
+              <span class="food-entry-desc">${e.description}</span>
+            </div>
+            <span class="food-entry-cal">${e.calories ? e.calories + ' kcal' : '--'}</span>
+          </div>
+        `).join('')}
+
+    ${todayFoodEntries.length > 0 ? `
+      <div class="food-totals-card">
+        <div class="food-totals-row">
+          <div class="food-total-item accent">
+            <div class="food-total-val">${totals.calories}</div>
+            <div class="food-total-label">卡路里</div>
+          </div>
+          <div class="food-total-item">
+            <div class="food-total-val">${totals.protein.toFixed(1)}g</div>
+            <div class="food-total-label">蛋白質</div>
+          </div>
+          <div class="food-total-item">
+            <div class="food-total-val">${totals.carbs.toFixed(1)}g</div>
+            <div class="food-total-label">碳水</div>
+          </div>
+          <div class="food-total-item">
+            <div class="food-total-val">${totals.fat.toFixed(1)}g</div>
+            <div class="food-total-label">脂肪</div>
+          </div>
+        </div>
+        ${totals.water > 0 ? `<div class="food-water-row">💧 今日水分 ${totals.water} ml</div>` : ''}
+      </div>
+    ` : ''}
+
+    <button class="btn-primary" id="add-food-btn" style="margin-top:16px">＋ 新增飲食</button>
+
+    <div id="food-form-area" style="display:none">
+      <div class="card" style="margin-top:16px">
+        <div class="section-label" style="padding:0 0 14px">新增飲食</div>
+
+        <div class="food-form-row">
+          <label class="food-form-label">餐別</label>
+          <select id="food-meal" class="food-select">
+            <option>早餐</option>
+            <option>午餐</option>
+            <option>晚餐</option>
+            <option>點心</option>
+            <option>消夜</option>
+          </select>
+        </div>
+
+        <div class="food-form-row">
+          <label class="food-form-label">食物描述</label>
+          <input id="food-desc" class="food-input" type="text" placeholder="例：雞胸便當、燕麥牛奶">
+        </div>
+
+        <input type="file" id="food-image-input" accept="image/*" capture="environment" style="display:none">
+        <button class="btn-camera" id="camera-btn">📷 拍照 AI 辨識</button>
+        <div id="ai-status" class="ai-status-msg" style="display:none"></div>
+
+        <div class="macro-grid">
+          <div class="macro-input-group">
+            <label class="food-form-label">卡路里 kcal</label>
+            <input id="food-cal" class="food-input" type="number" placeholder="0">
+          </div>
+          <div class="macro-input-group">
+            <label class="food-form-label">蛋白質 g</label>
+            <input id="food-protein" class="food-input" type="number" step="0.1" placeholder="0">
+          </div>
+          <div class="macro-input-group">
+            <label class="food-form-label">碳水 g</label>
+            <input id="food-carbs" class="food-input" type="number" step="0.1" placeholder="0">
+          </div>
+          <div class="macro-input-group">
+            <label class="food-form-label">脂肪 g</label>
+            <input id="food-fat" class="food-input" type="number" step="0.1" placeholder="0">
+          </div>
+          <div class="macro-input-group macro-span2">
+            <label class="food-form-label">水分 ml（可留空）</label>
+            <input id="food-water" class="food-input" type="number" placeholder="0">
+          </div>
+        </div>
+
+        <button class="btn-primary" id="submit-food-btn" style="margin-top:16px">記錄 ✓</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('add-food-btn').addEventListener('click', () => {
+    const form = document.getElementById('food-form-area');
+    const isOpen = form.style.display !== 'none';
+    form.style.display = isOpen ? 'none' : 'block';
+    document.getElementById('add-food-btn').textContent = isOpen ? '＋ 新增飲食' : '✕ 取消';
+    if (!isOpen) bindFoodForm(today);
+  });
+}
+
+function bindFoodForm(today) {
+  document.getElementById('camera-btn').addEventListener('click', () => {
+    document.getElementById('food-image-input').click();
+  });
+
+  document.getElementById('food-image-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const btn = document.getElementById('camera-btn');
+    const status = document.getElementById('ai-status');
+    btn.disabled = true;
+    btn.textContent = '🔄 AI 辨識中...';
+    status.style.display = 'block';
+    status.textContent = '正在分析食物圖片...';
+
+    const base64 = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = ev => resolve(ev.target.result.split(',')[1]);
+      reader.readAsDataURL(file);
+    });
+
+    try {
+      const result = await api.recognizeFood({imageBase64: base64, mimeType: file.type});
+      if (result.description) document.getElementById('food-desc').value = result.description;
+      if (result.calories) document.getElementById('food-cal').value = result.calories;
+      if (result.protein) document.getElementById('food-protein').value = result.protein;
+      if (result.carbs) document.getElementById('food-carbs').value = result.carbs;
+      if (result.fat) document.getElementById('food-fat').value = result.fat;
+      btn.textContent = '✅ 辨識完成';
+      status.textContent = '數據已填入，請確認後送出';
+    } catch {
+      btn.textContent = '📷 重新拍照';
+      status.textContent = '❌ 辨識失敗，請手動輸入';
+    }
+    btn.disabled = false;
+  });
+
+  document.getElementById('submit-food-btn').addEventListener('click', async () => {
+    const desc = document.getElementById('food-desc').value.trim();
+    if (!desc) { alert('請輸入食物描述'); return; }
+    const btn = document.getElementById('submit-food-btn');
+    btn.disabled = true;
+    btn.textContent = '送出中...';
+
+    const data = {
+      date: today,
+      meal: document.getElementById('food-meal').value,
+      description: desc,
+      calories: document.getElementById('food-cal').value || '',
+      protein: document.getElementById('food-protein').value || '',
+      carbs: document.getElementById('food-carbs').value || '',
+      fat: document.getElementById('food-fat').value || '',
+      waterIntake: document.getElementById('food-water').value || ''
+    };
+
+    try {
+      await api.logFood(data);
+      todayFoodEntries.push(data);
+      renderFoodSection(today);
+    } catch {
+      alert('記錄失敗，請重試');
+      btn.disabled = false;
+      btn.textContent = '記錄 ✓';
+    }
+  });
+}
+
+// ── Stats Tab ─────────────────────────────────────────────────────────────
 
 function renderStats(data) {
   const metrics = data.bodyMetrics || [];
@@ -64,7 +288,7 @@ function renderWeightChart(metrics) {
     return `${x},${y}`;
   }).join(' ');
 
-  const lastX = 290;
+  const lastX = (((metrics.length - 1) / (metrics.length - 1)) * 280 + 10);
   const lastY = 70 - ((last.weight - min) / range) * 60;
 
   return `
@@ -85,7 +309,7 @@ function renderWeightChart(metrics) {
 function renderHistory(history) {
   const section = document.getElementById('history-section');
   if (!section || !history || !history.length) return;
-  const typeMap = {leg:'leg', chest:'chest', back:'back', shoulder:'shoulder'};
+  const typeMap = {leg: 'leg', chest: 'chest', back: 'back', shoulder: 'shoulder'};
   section.innerHTML = `
     <div class="section-label">最近訓練</div>
     ${history.slice(0, 10).map(h => `
@@ -94,7 +318,7 @@ function renderHistory(history) {
           <div class="history-date">${h.date}</div>
           <div class="history-sub">${Array.isArray(h.exercises) ? h.exercises.join('、') : (h.dayType || '')}</div>
         </div>
-        <span class="day-badge ${typeMap[(h.dayType||'').toLowerCase()] || ''}">${h.dayType || '訓練'}</span>
+        <span class="day-badge ${typeMap[(h.dayType || '').toLowerCase()] || ''}">${h.dayType || '訓練'}</span>
       </div>
     `).join('')}
   `;

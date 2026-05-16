@@ -106,6 +106,7 @@ function doGet(e) {
   if (action === 'getTodayWorkout') return getTodayWorkout(ss, e.parameter.day);
   if (action === 'getStats') return getStats(ss);
   if (action === 'getHistory') return getHistory(ss);
+  if (action === 'getTodayFood') return getTodayFood(ss, e.parameter.date);
   return json({error: 'Unknown action'});
 }
 
@@ -116,6 +117,7 @@ function doPost(e) {
   if (data.action === 'logSet') return logSet(ss, data);
   if (data.action === 'logBody') return logBody(ss, data);
   if (data.action === 'logFood') return logFood(ss, data);
+  if (data.action === 'recognizeFoodImage') return recognizeFoodImage(data);
   return json({error: 'Unknown action'});
 }
 
@@ -150,6 +152,70 @@ function logFood(ss, data) {
     data.carbs || '', data.fat || '', data.waterIntake || ''
   ]);
   return json({success: true});
+}
+
+function getTodayFood(ss, date) {
+  const rows = ss.getSheetByName('Food Log').getDataRange().getValues().slice(1);
+  const entries = rows
+    .filter(r => String(r[0]) === date)
+    .map(r => ({
+      date: String(r[0]),
+      meal: r[1],
+      description: r[2],
+      calories: r[3],
+      protein: r[4],
+      carbs: r[5],
+      fat: r[6],
+      waterIntake: r[7]
+    }));
+  return json(entries);
+}
+
+function recognizeFoodImage(data) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) return json({error: 'GEMINI_API_KEY not set in Script Properties'});
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const payload = {
+    contents: [{
+      parts: [
+        {
+          inlineData: {
+            mimeType: data.mimeType || 'image/jpeg',
+            data: data.imageBase64
+          }
+        },
+        {
+          text: `Analyze this food image. Return ONLY a JSON object, no markdown, no explanation:
+{
+  "description": "食物名稱（繁體中文）",
+  "calories": <integer>,
+  "protein": <number with 1 decimal>,
+  "carbs": <number with 1 decimal>,
+  "fat": <number with 1 decimal>
+}
+If multiple food items are visible, describe them all and sum the nutritional values.`
+        }
+      ]
+    }]
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    const result = JSON.parse(response.getContentText());
+    if (!result.candidates || !result.candidates[0]) return json({error: 'No response from Gemini'});
+    const text = result.candidates[0].content.parts[0].text.trim();
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return json({error: 'Could not parse food data'});
+    return json(JSON.parse(match[0]));
+  } catch (e) {
+    return json({error: e.message});
+  }
 }
 
 function getStats(ss) {
