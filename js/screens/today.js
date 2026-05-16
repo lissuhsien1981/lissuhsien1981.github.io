@@ -9,16 +9,18 @@ export function initToday(container) {
   let selectedDay = DAYS[todayIdx];
 
   container.innerHTML = `
-    <div class="header">
-      <div class="header-sub">${formatDate()}</div>
-      <h1>課表</h1>
+    <div class="today-fixed-top">
+      <div class="header">
+        <div class="header-sub">${formatDate()}</div>
+        <h1>課表</h1>
+      </div>
+      <div class="day-switcher">
+        ${DAYS.filter(d => d !== 'Sunday').concat(['Sunday']).map(d => `
+          <button class="day-btn${d === selectedDay ? ' active' : ''}" data-day="${d}">${DAY_ZH[d]}</button>
+        `).join('')}
+      </div>
     </div>
-    <div class="day-switcher">
-      ${DAYS.filter(d => d !== 'Sunday').concat(['Sunday']).map(d => `
-        <button class="day-btn${d === selectedDay ? ' active' : ''}" data-day="${d}">${DAY_ZH[d]}</button>
-      `).join('')}
-    </div>
-    <div id="today-content"><div class="loading">載入中...</div></div>
+    <div id="today-content" class="today-scroll"><div class="loading">載入中...</div></div>
   `;
 
   function loadDay(day) {
