@@ -173,6 +173,25 @@ function renderFoodSection(today) {
   });
 }
 
+async function recognizeWithGemini(base64) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + CONFIG.geminiKey;
+  const body = {
+    contents: [{
+      parts: [
+        {inlineData: {mimeType: 'image/jpeg', data: base64}},
+        {text: 'Analyze this food image. Return ONLY a JSON object, no markdown:\n{"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\nIf multiple items, sum all values.'}
+      ]
+    }]
+  };
+  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  if (!res.ok) throw new Error('Gemini API error: ' + res.status);
+  const data = await res.json();
+  const text = data.candidates[0].content.parts[0].text.trim();
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('無法解析辨識結果');
+  return JSON.parse(match[0]);
+}
+
 function compressImage(file, maxPx = 1024) {
   return new Promise(resolve => {
     const img = new Image();
@@ -208,7 +227,7 @@ function bindFoodForm(today) {
     try {
       const base64 = await compressImage(file);
       status.textContent = '正在分析食物圖片...';
-      const result = await api.recognizeFood({imageBase64: base64, mimeType: 'image/jpeg'});
+      const result = await recognizeWithGemini(base64);
       if (result.error) throw new Error(result.error);
       if (result.description) document.getElementById('food-desc').value = result.description;
       if (result.calories) document.getElementById('food-cal').value = result.calories;
