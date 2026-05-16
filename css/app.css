@@ -53,7 +53,7 @@ body {
 }
 .today-scroll::-webkit-scrollbar { display: none; }
 
-.header { padding: calc(env(safe-area-inset-top, 44px) + 4px) 20px 8px; }
+.header { padding: 52px 20px 8px; }
 .header-sub { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
 .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
 .header-meta { font-size: 13px; color: var(--text2); margin-top: 4px; }
