@@ -1,5 +1,5 @@
 // sw.js
-const CACHE = 'fitcoach-v16';
+const CACHE = 'fitcoach-v17';
 const STATIC = [
   '/css/app.css', '/manifest.json', '/config.js',
   '/js/app.js', '/js/api.js', '/js/storage.js',

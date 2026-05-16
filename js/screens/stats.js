@@ -174,7 +174,7 @@ function renderFoodSection(today) {
 }
 
 async function recognizeWithGemini(base64) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + CONFIG.geminiKey;
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + CONFIG.geminiKey;
   const body = {
     contents: [{
       parts: [
