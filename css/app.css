@@ -70,6 +70,22 @@ body {
 }
 .set-dot.done { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
+.day-switcher {
+  display: flex; gap: 6px; padding: 8px 20px 12px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.day-switcher::-webkit-scrollbar { display: none; }
+.day-btn {
+  flex-shrink: 0; padding: 6px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; color: var(--text2);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.day-btn.active {
+  background: var(--accent); border-color: var(--accent); color: #0f0f0f;
+}
+
 .today-banner {
   margin: 0 20px 16px;
   background: var(--accent); border-radius: 16px;

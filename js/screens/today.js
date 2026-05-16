@@ -2,22 +2,41 @@
 import {api} from '../api.js';
 
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAY_ZH = {Monday:'週一',Tuesday:'週二',Wednesday:'週三',Thursday:'週四',Friday:'週五',Saturday:'週六',Sunday:'週日'};
 
 export function initToday(container) {
-  const today = DAYS[new Date().getDay()];
+  const todayIdx = new Date().getDay();
+  let selectedDay = DAYS[todayIdx];
+
   container.innerHTML = `
     <div class="header">
       <div class="header-sub">${formatDate()}</div>
-      <h1>今日課表</h1>
+      <h1>課表</h1>
+    </div>
+    <div class="day-switcher">
+      ${DAYS.filter(d => d !== 'Sunday').concat(['Sunday']).map(d => `
+        <button class="day-btn${d === selectedDay ? ' active' : ''}" data-day="${d}">${DAY_ZH[d]}</button>
+      `).join('')}
     </div>
     <div id="today-content"><div class="loading">載入中...</div></div>
   `;
 
-  api.getTodayWorkout(today).then(exercises => {
-    renderToday(container, exercises, today);
-  }).catch(() => {
-    document.getElementById('today-content').innerHTML = '<div class="empty">無法載入課表，請確認網路連線</div>';
+  function loadDay(day) {
+    selectedDay = day;
+    container.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('active', b.dataset.day === day));
+    document.getElementById('today-content').innerHTML = '<div class="loading">載入中...</div>';
+    api.getTodayWorkout(day).then(exercises => {
+      renderToday(container, exercises, day);
+    }).catch(() => {
+      document.getElementById('today-content').innerHTML = '<div class="empty">無法載入課表，請確認網路連線</div>';
+    });
+  }
+
+  container.querySelectorAll('.day-btn').forEach(btn => {
+    btn.addEventListener('click', () => loadDay(btn.dataset.day));
   });
+
+  loadDay(selectedDay);
 }
 
 function renderToday(container, exercises, day) {
@@ -103,8 +122,7 @@ function checkAllDone(card) {
 }
 
 function getDayLabel(day) {
-  const map = {Monday:'週一',Tuesday:'週二',Wednesday:'週三',Thursday:'週四',Friday:'週五',Saturday:'週六',Sunday:'週日'};
-  return map[day] || day;
+  return DAY_ZH[day] || day;
 }
 
 function formatDate() {
