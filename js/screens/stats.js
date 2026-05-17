@@ -134,6 +134,7 @@ function renderFoodSection(today) {
 
         <input type="file" id="food-image-input" accept="image/*" capture="environment" style="display:none">
         <button class="btn-camera" id="camera-btn">📷 拍照 AI 辨識</button>
+        <button class="btn-ai-text" id="ai-text-btn">🤖 AI 分析文字</button>
         <div id="ai-status" class="ai-status-msg" style="display:none"></div>
 
         <div class="macro-grid">
@@ -171,6 +172,24 @@ function renderFoodSection(today) {
     document.getElementById('add-food-btn').textContent = isOpen ? '＋ 新增飲食' : '✕ 取消';
     if (!isOpen) bindFoodForm(today);
   });
+}
+
+async function analyzeTextWithGemini(text) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + CONFIG.geminiKey;
+  const body = {
+    contents: [{
+      parts: [{
+        text: `分析以下食物的營養素（台灣食物請給予準確估計），回傳 ONLY a JSON object，不要 markdown:\n"${text}"\nJSON格式: {"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\n若有多種食物，加總所有數值。不確定時給合理估計值。`
+      }]
+    }]
+  };
+  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  if (!res.ok) throw new Error('Gemini API error: ' + res.status);
+  const data = await res.json();
+  const raw = data.candidates[0].content.parts[0].text.trim();
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('無法解析辨識結果');
+  return JSON.parse(match[0]);
 }
 
 async function recognizeWithGemini(base64) {
@@ -212,6 +231,31 @@ function compressImage(file, maxPx = 1024) {
 function bindFoodForm(today) {
   document.getElementById('camera-btn').addEventListener('click', () => {
     document.getElementById('food-image-input').click();
+  });
+
+  document.getElementById('ai-text-btn').addEventListener('click', async () => {
+    const desc = document.getElementById('food-desc').value.trim();
+    if (!desc) { alert('請先在「食物描述」欄輸入食物名稱'); document.getElementById('food-desc').focus(); return; }
+    const btn = document.getElementById('ai-text-btn');
+    const status = document.getElementById('ai-status');
+    btn.disabled = true;
+    btn.textContent = '🔄 AI 分析中...';
+    status.style.display = 'block';
+    status.textContent = `正在分析：${desc}`;
+    try {
+      const result = await analyzeTextWithGemini(desc);
+      if (result.description) document.getElementById('food-desc').value = result.description;
+      if (result.calories) document.getElementById('food-cal').value = result.calories;
+      if (result.protein) document.getElementById('food-protein').value = result.protein;
+      if (result.carbs) document.getElementById('food-carbs').value = result.carbs;
+      if (result.fat) document.getElementById('food-fat').value = result.fat;
+      btn.textContent = '✅ 分析完成';
+      status.textContent = '數據已填入，請確認後送出';
+    } catch (err) {
+      btn.textContent = '🤖 AI 分析文字';
+      status.textContent = `❌ 分析失敗：${err.message || '請手動輸入'}`;
+    }
+    btn.disabled = false;
   });
 
   document.getElementById('food-image-input').addEventListener('change', async (e) => {

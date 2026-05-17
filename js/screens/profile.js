@@ -2,6 +2,10 @@
 import {api} from '../api.js';
 
 export function initProfile(container) {
+  renderProfile(container);
+}
+
+function renderProfile(container) {
   const profile = JSON.parse(localStorage.getItem('fitcoach-profile') || '{}');
 
   container.innerHTML = `
@@ -28,21 +32,27 @@ export function initProfile(container) {
     <div class="section-label" style="margin-top:4px;">個人資料</div>
     <div class="profile-section">
       <div class="profile-section-title">基本</div>
-      <div class="profile-row">
+      <div class="profile-row" id="edit-name-row">
+        <span>姓名</span>
+        <span class="profile-row-val">${profile.name || '--'} <span style="color:var(--text3);font-size:12px">✏️</span></span>
+      </div>
+      <div class="profile-row" id="edit-height-row">
         <span>身高</span>
-        <span class="profile-row-val">${profile.height || '--'} cm</span>
+        <span class="profile-row-val">${profile.height ? profile.height + ' cm' : '--'} <span style="color:var(--text3);font-size:12px">✏️</span></span>
       </div>
-      <div class="profile-row">
+      <div class="profile-row" id="edit-targetweight-row">
         <span>目標體重</span>
-        <span class="profile-row-val">${profile.targetWeight || '--'} kg</span>
+        <span class="profile-row-val">${profile.targetWeight ? profile.targetWeight + ' kg' : '--'} <span style="color:var(--text3);font-size:12px">✏️</span></span>
       </div>
-      <div class="profile-row">
+      <div class="profile-row" id="edit-phase-row">
         <span>目前週期</span>
-        <span class="profile-row-val">${profile.phase || '傷後回歸'}</span>
+        <span class="profile-row-val">${profile.phase || '傷後回歸'} <span style="color:var(--text3);font-size:12px">✏️</span></span>
       </div>
     </div>
 
-    <div class="profile-section">
+    <button class="btn-complete" id="edit-all-btn" style="margin-top:4px">✏️ 編輯個人資料</button>
+
+    <div class="profile-section" style="margin-top:8px">
       <div class="profile-section-title">資料連結</div>
       <div class="profile-row">
         <span>Google Sheets</span>
@@ -69,11 +79,68 @@ export function initProfile(container) {
     }
   });
 
+  document.getElementById('edit-all-btn').addEventListener('click', () => showEditModal(profile, container));
+
   api.getStats().then(() => {
     const el = document.getElementById('sheets-status');
     if (el) el.textContent = '已連結 ✓';
   }).catch(() => {
     const el = document.getElementById('sheets-status');
     if (el) { el.textContent = '連線失敗'; el.style.color = 'var(--red)'; }
+  });
+}
+
+function showEditModal(profile, container) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  const PHASES = ['傷後回歸', '增肌期', '減脂期', '維持期', '賽前備戰'];
+
+  overlay.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h3 class="modal-title">編輯個人資料</h3>
+
+      <label class="modal-label">姓名</label>
+      <input class="modal-input" id="p-name" type="text" placeholder="Sam" value="${profile.name || ''}">
+
+      <label class="modal-label">身高 (cm)</label>
+      <input class="modal-input" id="p-height" type="number" min="100" max="250" step="0.1" placeholder="175" value="${profile.height || ''}">
+
+      <label class="modal-label">目標體重 (kg)</label>
+      <input class="modal-input" id="p-targetweight" type="number" min="30" max="200" step="0.1" placeholder="75" value="${profile.targetWeight || ''}">
+
+      <label class="modal-label">目前訓練週期</label>
+      <select class="modal-input" id="p-phase" style="-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3E%3Cpath d=%27M1 1l5 5 5-5%27 stroke=%27%23888%27 stroke-width=%271.5%27 fill=%27none%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 14px center;">
+        ${PHASES.map(p => `<option value="${p}"${(profile.phase || '傷後回歸') === p ? ' selected' : ''}>${p}</option>`).join('')}
+      </select>
+
+      <button class="btn-primary" id="p-save" style="margin-top:8px">儲存</button>
+      <button class="btn-cancel" id="p-cancel">取消</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('open'), 10);
+
+  function close() { overlay.classList.remove('open'); setTimeout(() => overlay.remove(), 250); }
+  overlay.querySelector('#p-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  overlay.querySelector('#p-save').addEventListener('click', () => {
+    const name = overlay.querySelector('#p-name').value.trim();
+    const height = parseFloat(overlay.querySelector('#p-height').value) || null;
+    const targetWeight = parseFloat(overlay.querySelector('#p-targetweight').value) || null;
+    const phase = overlay.querySelector('#p-phase').value;
+
+    if (name) profile.name = name;
+    if (height) profile.height = height;
+    if (targetWeight) profile.targetWeight = targetWeight;
+    profile.phase = phase;
+    localStorage.setItem('fitcoach-profile', JSON.stringify(profile));
+    close();
+    // Re-render profile screen
+    const screenEl = document.getElementById('screen-profile');
+    if (screenEl) renderProfile(screenEl);
   });
 }
