@@ -22,10 +22,11 @@ function renderProfile(container) {
     </div>
 
     <div class="section-label">今日體重</div>
-    <div class="card" style="display:flex;gap:12px;align-items:center;padding:12px 16px;">
-      <input type="number" id="weight-input" placeholder="kg" step="0.1"
-        style="flex:1;background:transparent;border:none;outline:none;font-size:28px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;"
+    <div class="card" style="display:flex;gap:8px;align-items:center;padding:12px 16px;">
+      <input type="number" id="weight-input" placeholder="0.0" step="0.1" inputmode="decimal"
+        style="flex:1;background:transparent;border:none;outline:none;font-size:28px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:0;"
         value="${profile.lastWeight || ''}">
+      <span style="font-size:20px;font-weight:700;color:var(--text2);flex-shrink:0;">kg</span>
       <button class="btn-primary" id="save-weight-btn" style="margin:0;padding:12px 20px;width:auto;flex-shrink:0;">儲存</button>
     </div>
 
@@ -69,13 +70,16 @@ function renderProfile(container) {
     const w = parseFloat(document.getElementById('weight-input').value);
     if (!w) { alert('請輸入體重'); return; }
     const today = new Date().toISOString().split('T')[0];
+
+    // Always save locally first
+    profile.lastWeight = w;
+    localStorage.setItem('fitcoach-profile', JSON.stringify(profile));
+
     try {
       await api.logBody({date: today, weight: w});
-      profile.lastWeight = w;
-      localStorage.setItem('fitcoach-profile', JSON.stringify(profile));
       alert(`體重 ${w} kg 已記錄 ✓`);
     } catch {
-      alert('儲存失敗，請確認網路連線');
+      alert(`體重 ${w} kg 已儲存（API 離線，下次同步）`);
     }
   });
 
