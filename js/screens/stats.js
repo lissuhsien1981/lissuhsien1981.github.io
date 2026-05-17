@@ -175,7 +175,7 @@ function renderFoodSection(today) {
 }
 
 async function analyzeTextWithGemini(text) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + CONFIG.geminiKey;
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + CONFIG.geminiKey;
   const body = {
     contents: [{
       parts: [{
@@ -193,7 +193,7 @@ async function analyzeTextWithGemini(text) {
 }
 
 async function recognizeWithGemini(base64) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + CONFIG.geminiKey;
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + CONFIG.geminiKey;
   const body = {
     contents: [{
       parts: [
