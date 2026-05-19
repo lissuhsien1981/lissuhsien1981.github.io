@@ -117,6 +117,7 @@ function doPost(e) {
   if (data.action === 'logSet') return logSet(ss, data);
   if (data.action === 'logBody') return logBody(ss, data);
   if (data.action === 'logFood') return logFood(ss, data);
+  if (data.action === 'logWatch') return logWatch(ss, data);
   if (data.action === 'recognizeFoodImage') return recognizeFoodImage(data);
   return json({error: 'Unknown action'});
 }
@@ -154,6 +155,15 @@ function logFood(ss, data) {
   return json({success: true});
 }
 
+function logWatch(ss, data) {
+  ss.getSheetByName('Apple Watch').appendRow([
+    data.date, data.workoutType || '', Number(data.duration) || '',
+    Number(data.calories) || '', Number(data.avgHR) || '', Number(data.maxHR) || '',
+    Number(data.sleepDuration) || '', data.sleepQuality || ''
+  ]);
+  return json({success: true});
+}
+
 function getTodayFood(ss, date) {
   const rows = ss.getSheetByName('Food Log').getDataRange().getValues().slice(1);
   const entries = rows
@@ -175,7 +185,7 @@ function recognizeFoodImage(data) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) return json({error: 'GEMINI_API_KEY not set in Script Properties'});
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   const payload = {
     contents: [{
       parts: [

@@ -174,39 +174,43 @@ function renderFoodSection(today) {
   });
 }
 
-async function analyzeTextWithGemini(text) {
+async function callGemini(bodyObj) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + CONFIG.geminiKey;
-  const body = {
-    contents: [{
-      parts: [{
-        text: `分析以下食物的營養素（台灣食物請給予準確估計），回傳 ONLY a JSON object，不要 markdown:\n"${text}"\nJSON格式: {"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\n若有多種食物，加總所有數值。不確定時給合理估計值。`
-      }]
-    }]
-  };
-  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-  if (!res.ok) throw new Error('Gemini API error: ' + res.status);
+  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(bodyObj)});
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).error?.message || ''; } catch {}
+    if (res.status === 429) throw new Error('Gemini API 已達到每日使用上限，請明天再試或更新 API Key');
+    if (res.status === 403 || res.status === 400) throw new Error('Gemini API Key 無效或已被停用，請重新產生 Key');
+    throw new Error(`Gemini API 錯誤 ${res.status}${detail ? '：' + detail : ''}`);
+  }
   const data = await res.json();
-  const raw = data.candidates[0].content.parts[0].text.trim();
+  if (!data.candidates?.[0]?.content?.parts?.[0]) {
+    const reason = data.promptFeedback?.blockReason;
+    throw new Error(reason ? `內容被 Gemini 封鎖：${reason}` : '未收到 Gemini 回應');
+  }
+  return data.candidates[0].content.parts[0].text.trim();
+}
+
+async function analyzeTextWithGemini(text) {
+  const raw = await callGemini({
+    contents: [{parts: [{
+      text: `分析以下食物的營養素（台灣食物請給予準確估計），回傳 ONLY a JSON object，不要 markdown:\n"${text}"\nJSON格式: {"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\n若有多種食物，加總所有數值。不確定時給合理估計值。`
+    }]}]
+  });
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('無法解析辨識結果');
   return JSON.parse(match[0]);
 }
 
 async function recognizeWithGemini(base64) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + CONFIG.geminiKey;
-  const body = {
-    contents: [{
-      parts: [
-        {inlineData: {mimeType: 'image/jpeg', data: base64}},
-        {text: 'Analyze this food image. Return ONLY a JSON object, no markdown:\n{"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\nIf multiple items, sum all values.'}
-      ]
-    }]
-  };
-  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-  if (!res.ok) throw new Error('Gemini API error: ' + res.status);
-  const data = await res.json();
-  const text = data.candidates[0].content.parts[0].text.trim();
-  const match = text.match(/\{[\s\S]*\}/);
+  const raw = await callGemini({
+    contents: [{parts: [
+      {inlineData: {mimeType: 'image/jpeg', data: base64}},
+      {text: 'Analyze this food image. Return ONLY a JSON object, no markdown:\n{"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\nIf multiple items, sum all values.'}
+    ]}]
+  });
+  const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('無法解析辨識結果');
   return JSON.parse(match[0]);
 }

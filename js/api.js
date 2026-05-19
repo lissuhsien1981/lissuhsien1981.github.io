@@ -26,5 +26,6 @@ export const api = {
   logBody: (data) => apiPost({action: 'logBody', ...data}),
   logFood: (data) => apiPost({action: 'logFood', ...data}),
   getTodayFood: (date) => apiFetch({action: 'getTodayFood', date}),
-  recognizeFood: (data) => apiPost({action: 'recognizeFoodImage', ...data})
+  recognizeFood: (data) => apiPost({action: 'recognizeFoodImage', ...data}),
+  logWatch: (data) => apiPost({action: 'logWatch', ...data})
 };

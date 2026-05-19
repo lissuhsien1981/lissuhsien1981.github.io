@@ -1,6 +1,103 @@
 // js/screens/profile.js
 import {api} from '../api.js';
 
+function showWatchModal(profile, container) {
+  const today = new Date().toISOString().split('T')[0];
+  const WORKOUT_TYPES = ['跑步', '重訓', '有氧', '游泳', '騎車', '健走', '其他'];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-sheet" style="max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div class="modal-handle"></div>
+      <h3 class="modal-title">⌚ Apple Watch 資料</h3>
+
+      <label class="modal-label">日期</label>
+      <input class="modal-input" id="w-date" type="date" value="${today}">
+
+      <label class="modal-label">運動類型</label>
+      <select class="modal-input" id="w-type" style="-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3E%3Cpath d=%27M1 1l5 5 5-5%27 stroke=%27%23888%27 stroke-width=%271.5%27 fill=%27none%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 14px center;">
+        ${WORKOUT_TYPES.map(t => `<option>${t}</option>`).join('')}
+      </select>
+
+      <div class="modal-row">
+        <div>
+          <label class="modal-label">時長（分鐘）</label>
+          <input class="modal-input" id="w-duration" type="number" min="1" max="300" placeholder="45">
+        </div>
+        <div>
+          <label class="modal-label">消耗卡路里</label>
+          <input class="modal-input" id="w-calories" type="number" min="0" placeholder="350">
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div>
+          <label class="modal-label">平均心率 bpm</label>
+          <input class="modal-input" id="w-avghr" type="number" min="40" max="220" placeholder="145">
+        </div>
+        <div>
+          <label class="modal-label">最高心率 bpm</label>
+          <input class="modal-input" id="w-maxhr" type="number" min="40" max="220" placeholder="175">
+        </div>
+      </div>
+
+      <label class="modal-label">睡眠時長（小時）</label>
+      <input class="modal-input" id="w-sleep" type="number" min="0" max="24" step="0.5" placeholder="7.5">
+
+      <label class="modal-label">睡眠品質</label>
+      <select class="modal-input" id="w-sleepq" style="-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3E%3Cpath d=%27M1 1l5 5 5-5%27 stroke=%27%23888%27 stroke-width=%271.5%27 fill=%27none%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 14px center;">
+        <option value="">-- 不填 --</option>
+        <option>優</option>
+        <option>良</option>
+        <option>一般</option>
+        <option>差</option>
+      </select>
+
+      <button class="btn-primary" id="w-save" style="margin-top:8px">儲存</button>
+      <button class="btn-cancel" id="w-cancel">取消</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('open'), 10);
+
+  function close() { overlay.classList.remove('open'); setTimeout(() => overlay.remove(), 250); }
+  overlay.querySelector('#w-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  overlay.querySelector('#w-save').addEventListener('click', async () => {
+    const date = overlay.querySelector('#w-date').value;
+    const workoutType = overlay.querySelector('#w-type').value;
+    const duration = overlay.querySelector('#w-duration').value;
+    const calories = overlay.querySelector('#w-calories').value;
+    const avgHR = overlay.querySelector('#w-avghr').value;
+    const maxHR = overlay.querySelector('#w-maxhr').value;
+    const sleepDuration = overlay.querySelector('#w-sleep').value;
+    const sleepQuality = overlay.querySelector('#w-sleepq').value;
+
+    if (!duration && !sleepDuration) { alert('請至少輸入時長或睡眠時長'); return; }
+
+    const btn = overlay.querySelector('#w-save');
+    btn.disabled = true;
+    btn.textContent = '儲存中...';
+
+    try {
+      await api.logWatch({date, workoutType, duration, calories, avgHR, maxHR, sleepDuration, sleepQuality});
+      profile.lastWatchImport = date;
+      localStorage.setItem('fitcoach-profile', JSON.stringify(profile));
+      close();
+      const screenEl = document.getElementById('screen-profile');
+      if (screenEl) renderProfile(screenEl);
+      alert(`Apple Watch 資料已記錄 ✓`);
+    } catch {
+      btn.disabled = false;
+      btn.textContent = '儲存';
+      alert('記錄失敗，請確認網路連線後重試');
+    }
+  });
+}
+
 export function initProfile(container) {
   renderProfile(container);
 }
@@ -59,11 +156,13 @@ function renderProfile(container) {
         <span>Google Sheets</span>
         <span class="profile-row-val ok" id="sheets-status">確認中...</span>
       </div>
-      <div class="profile-row">
+      <div class="profile-row" id="watch-last-row">
         <span>Apple Watch 上次匯入</span>
         <span class="profile-row-val">${profile.lastWatchImport || '未設定'}</span>
       </div>
     </div>
+
+    <button class="btn-complete" id="watch-import-btn" style="margin-top:4px">⌚ 輸入 Apple Watch 資料</button>
   `;
 
   document.getElementById('save-weight-btn').addEventListener('click', async () => {
@@ -84,6 +183,7 @@ function renderProfile(container) {
   });
 
   document.getElementById('edit-all-btn').addEventListener('click', () => showEditModal(profile, container));
+  document.getElementById('watch-import-btn').addEventListener('click', () => showWatchModal(profile, container));
 
   api.getStats().then(() => {
     const el = document.getElementById('sheets-status');
