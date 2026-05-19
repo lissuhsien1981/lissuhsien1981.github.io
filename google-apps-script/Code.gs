@@ -118,6 +118,7 @@ function doPost(e) {
   if (data.action === 'logBody') return logBody(ss, data);
   if (data.action === 'logFood') return logFood(ss, data);
   if (data.action === 'logWatch') return logWatch(ss, data);
+  if (data.action === 'analyzeFood') return analyzeFood(data);
   if (data.action === 'recognizeFoodImage') return recognizeFoodImage(data);
   return json({error: 'Unknown action'});
 }
@@ -179,6 +180,38 @@ function getTodayFood(ss, date) {
       waterIntake: r[7]
     }));
   return json(entries);
+}
+
+function analyzeFood(data) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) return json({error: 'GEMINI_API_KEY not set in Script Properties'});
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const payload = {
+    contents: [{
+      parts: [{
+        text: `分析以下食物的營養素（台灣食物請給予準確估計），回傳 ONLY a JSON object，不要 markdown:\n"${data.text}"\nJSON格式: {"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\n若有多種食物，加總所有數值。不確定時給合理估計值。`
+      }]
+    }]
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'application/json',
+      payload: JSON.stringify(payload), muteHttpExceptions: true
+    });
+    const httpCode = response.getResponseCode();
+    const result = JSON.parse(response.getContentText());
+    if (httpCode === 429) return json({error: 'Gemini API 達到使用上限，請稍後再試'});
+    if (httpCode !== 200) return json({error: 'Gemini API 錯誤：' + httpCode});
+    if (!result.candidates || !result.candidates[0]) return json({error: '未收到 Gemini 回應'});
+    const text = result.candidates[0].content.parts[0].text.trim();
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return json({error: '無法解析辨識結果'});
+    return json(JSON.parse(match[0]));
+  } catch (e) {
+    return json({error: e.message});
+  }
 }
 
 function recognizeFoodImage(data) {

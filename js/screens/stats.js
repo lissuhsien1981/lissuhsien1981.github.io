@@ -174,46 +174,6 @@ function renderFoodSection(today) {
   });
 }
 
-async function callGemini(bodyObj) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + CONFIG.geminiKey;
-  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(bodyObj)});
-  if (!res.ok) {
-    let detail = '';
-    try { detail = (await res.json()).error?.message || ''; } catch {}
-    if (res.status === 429) throw new Error('Gemini API 已達到每日使用上限，請明天再試或更新 API Key');
-    if (res.status === 403 || res.status === 400) throw new Error('Gemini API Key 無效或已被停用，請重新產生 Key');
-    throw new Error(`Gemini API 錯誤 ${res.status}${detail ? '：' + detail : ''}`);
-  }
-  const data = await res.json();
-  if (!data.candidates?.[0]?.content?.parts?.[0]) {
-    const reason = data.promptFeedback?.blockReason;
-    throw new Error(reason ? `內容被 Gemini 封鎖：${reason}` : '未收到 Gemini 回應');
-  }
-  return data.candidates[0].content.parts[0].text.trim();
-}
-
-async function analyzeTextWithGemini(text) {
-  const raw = await callGemini({
-    contents: [{parts: [{
-      text: `分析以下食物的營養素（台灣食物請給予準確估計），回傳 ONLY a JSON object，不要 markdown:\n"${text}"\nJSON格式: {"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\n若有多種食物，加總所有數值。不確定時給合理估計值。`
-    }]}]
-  });
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('無法解析辨識結果');
-  return JSON.parse(match[0]);
-}
-
-async function recognizeWithGemini(base64) {
-  const raw = await callGemini({
-    contents: [{parts: [
-      {inlineData: {mimeType: 'image/jpeg', data: base64}},
-      {text: 'Analyze this food image. Return ONLY a JSON object, no markdown:\n{"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\nIf multiple items, sum all values.'}
-    ]}]
-  });
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('無法解析辨識結果');
-  return JSON.parse(match[0]);
-}
 
 function compressImage(file, maxPx = 1024) {
   return new Promise(resolve => {
@@ -247,7 +207,8 @@ function bindFoodForm(today) {
     status.style.display = 'block';
     status.textContent = `正在分析：${desc}`;
     try {
-      const result = await analyzeTextWithGemini(desc);
+      const result = await api.analyzeFood({text: desc});
+      if (result.error) throw new Error(result.error);
       if (result.description) document.getElementById('food-desc').value = result.description;
       if (result.calories) document.getElementById('food-cal').value = result.calories;
       if (result.protein) document.getElementById('food-protein').value = result.protein;
@@ -275,7 +236,7 @@ function bindFoodForm(today) {
     try {
       const base64 = await compressImage(file);
       status.textContent = '正在分析食物圖片...';
-      const result = await recognizeWithGemini(base64);
+      const result = await api.recognizeFood({imageBase64: base64, mimeType: 'image/jpeg'});
       if (result.error) throw new Error(result.error);
       if (result.description) document.getElementById('food-desc').value = result.description;
       if (result.calories) document.getElementById('food-cal').value = result.calories;
@@ -286,10 +247,7 @@ function bindFoodForm(today) {
       status.textContent = '數據已填入，請確認後送出';
     } catch (err) {
       btn.textContent = '📷 重新拍照';
-      const msg = err.message || '';
-      status.textContent = msg.includes('GEMINI_API_KEY')
-        ? '❌ 尚未設定 Gemini API Key（見 Apps Script Script Properties）'
-        : `❌ 辨識失敗：${msg || '請手動輸入'}`;
+      status.textContent = `❌ 辨識失敗：${err.message || '請手動輸入'}`;
     }
     btn.disabled = false;
   });
