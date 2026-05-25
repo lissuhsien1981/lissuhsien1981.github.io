@@ -11,6 +11,19 @@ let timer = null;
 let numpad = null;
 let selectedRestSecs = 120;
 
+const TIMED_EXERCISES = ['棒式', '側棒式', '平板支撐', 'plank'];
+const BODYWEIGHT_EXERCISES = ['引體向上', '雙槓撐體', '伏地挺身', '卷腹', '腹輪', '懸吊抬腿'];
+
+function isTimed(ex) {
+  if (!ex) return false;
+  return TIMED_EXERCISES.some(k => (ex.exercise || '').toLowerCase().includes(k.toLowerCase()));
+}
+
+function isBodyweight(ex) {
+  if (!ex) return false;
+  return BODYWEIGHT_EXERCISES.some(k => (ex.exercise || '').includes(k));
+}
+
 export function setCurrentExercise(ex) {
   currentExercise = ex;
   setHistory = [];
@@ -93,11 +106,12 @@ function renderLog(container) {
   if (cardio) {
     renderCardioInput(document.getElementById('input-area'), ex);
   } else {
+    const mode = isTimed(ex) ? 'timed' : (isBodyweight(ex) ? 'bodyweight' : 'standard');
     numpad = new Numpad(document.getElementById('input-area'), {
       onWeightChange: () => {},
       onRepsChange: () => {}
-    });
-    if (ex.weightTarget) numpad.setDefaults(ex.weightTarget, ex.reps);
+    }, mode);
+    if (ex.weightTarget || ex.reps) numpad.setDefaults(ex.weightTarget || 0, ex.reps);
   }
 
   document.getElementById('log-btn').addEventListener('click', () => logCurrentSet(container));
@@ -136,8 +150,13 @@ async function logCurrentSet(container) {
   } else {
     if (!numpad) return;
     const {weight, reps} = numpad.values;
-    if (!weight || !reps) { alert('請輸入重量和次數'); return; }
-    record = { date: today, dayType: ex.dayType || '', exercise: ex.exercise, setNum, weight, reps, extraSet: setNum > ex.sets };
+    if (isTimed(ex)) {
+      if (!reps) { alert('請輸入持續時間（秒）'); return; }
+      record = { date: today, dayType: ex.dayType || '', exercise: ex.exercise, setNum, weight: 0, reps, extraSet: setNum > ex.sets, notes: '計時' };
+    } else {
+      if (!reps) { alert('請輸入次數'); return; }
+      record = { date: today, dayType: ex.dayType || '', exercise: ex.exercise, setNum, weight, reps, extraSet: setNum > ex.sets };
+    }
   }
 
   setHistory.push(record);
@@ -170,15 +189,22 @@ function renderHistory() {
   const list = document.getElementById('history-list');
   if (!list) return;
   list.innerHTML = setHistory.map((r, i) => {
-    const isPR = i > 0 && r.weight > Math.max(...setHistory.slice(0, i).map(x => x.weight));
     const isCardioRecord = r.notes === '有氧';
-    const val = isCardioRecord
-      ? `${r.weight} 分鐘${r.reps ? ` · ${r.reps} bpm` : ''}`
-      : `${r.weight} kg × ${r.reps}${isPR ? ' 🏆' : ''}`;
+    const isTimedRecord = r.notes === '計時';
+    const isPR = !isCardioRecord && !isTimedRecord && i > 0 && r.weight > Math.max(...setHistory.slice(0, i).map(x => x.weight));
+    let val;
+    if (isCardioRecord) {
+      val = `${r.weight} 分鐘${r.reps ? ` · ${r.reps} bpm` : ''}`;
+    } else if (isTimedRecord) {
+      val = `${Math.floor(r.reps / 60)}:${String(r.reps % 60).padStart(2, '0')}`;
+    } else {
+      const weightStr = r.weight ? `${r.weight} kg` : '自體重量';
+      val = `${weightStr} × ${r.reps}${isPR ? ' 🏆' : ''}`;
+    }
     return `
       <div class="set-history-row">
         <span class="set-history-label">第 ${r.setNum} 組${r.extraSet ? ' ＋' : ''}</span>
-        <span class="set-history-val${isPR && !isCardioRecord ? ' pr' : ''}">${val}</span>
+        <span class="set-history-val${isPR ? ' pr' : ''}">${val}</span>
       </div>
     `;
   }).join('');

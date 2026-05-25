@@ -166,11 +166,15 @@ function logWatch(ss, data) {
 }
 
 function getTodayFood(ss, date) {
+  const tz = Session.getScriptTimeZone();
   const rows = ss.getSheetByName('Food Log').getDataRange().getValues().slice(1);
   const entries = rows
-    .filter(r => String(r[0]) === date)
+    .filter(r => {
+      const d = r[0] instanceof Date ? Utilities.formatDate(r[0], tz, 'yyyy-MM-dd') : String(r[0]).slice(0, 10);
+      return d === date;
+    })
     .map(r => ({
-      date: String(r[0]),
+      date: date,
       meal: r[1],
       description: r[2],
       calories: r[3],
@@ -186,7 +190,7 @@ function analyzeFood(data) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) return json({error: 'GEMINI_API_KEY not set in Script Properties'});
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
   const payload = {
     contents: [{
       parts: [{
@@ -218,7 +222,7 @@ function recognizeFoodImage(data) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) return json({error: 'GEMINI_API_KEY not set in Script Properties'});
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
   const payload = {
     contents: [{
       parts: [
@@ -284,10 +288,11 @@ function getStats(ss) {
 }
 
 function getHistory(ss) {
+  const tz = Session.getScriptTimeZone();
   const rows = ss.getSheetByName('Workout Log').getDataRange().getValues().slice(1);
   const byDate = {};
   rows.forEach(r => {
-    const d = String(r[0]);
+    const d = r[0] instanceof Date ? Utilities.formatDate(r[0], tz, 'yyyy-MM-dd') : String(r[0]).slice(0, 10);
     if (!byDate[d]) byDate[d] = {date: d, dayType: r[1], exercises: []};
     if (!byDate[d].exercises.includes(r[2])) byDate[d].exercises.push(r[2]);
   });

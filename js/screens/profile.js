@@ -219,6 +219,30 @@ function showEditModal(profile, container) {
         ${PHASES.map(p => `<option value="${p}"${(profile.phase || '傷後回歸') === p ? ' selected' : ''}>${p}</option>`).join('')}
       </select>
 
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px">每日營養目標</div>
+        <div class="modal-row">
+          <div>
+            <label class="modal-label">卡路里 kcal</label>
+            <input class="modal-input" id="p-cal" type="number" min="0" placeholder="2200" value="${profile.goalCalories || ''}">
+          </div>
+          <div>
+            <label class="modal-label">蛋白質 g</label>
+            <input class="modal-input" id="p-protein" type="number" min="0" placeholder="160" value="${profile.goalProtein || ''}">
+          </div>
+        </div>
+        <div class="modal-row">
+          <div>
+            <label class="modal-label">碳水 g</label>
+            <input class="modal-input" id="p-carbs" type="number" min="0" placeholder="220" value="${profile.goalCarbs || ''}">
+          </div>
+          <div>
+            <label class="modal-label">脂肪 g</label>
+            <input class="modal-input" id="p-fat" type="number" min="0" placeholder="65" value="${profile.goalFat || ''}">
+          </div>
+        </div>
+      </div>
+
       <button class="btn-primary" id="p-save" style="margin-top:8px">儲存</button>
       <button class="btn-cancel" id="p-cancel">取消</button>
     </div>
@@ -241,6 +265,10 @@ function showEditModal(profile, container) {
     if (height) profile.height = height;
     if (targetWeight) profile.targetWeight = targetWeight;
     profile.phase = phase;
+    const cal = parseInt(overlay.querySelector('#p-cal').value); if (cal) profile.goalCalories = cal;
+    const prot = parseInt(overlay.querySelector('#p-protein').value); if (prot) profile.goalProtein = prot;
+    const carbs = parseInt(overlay.querySelector('#p-carbs').value); if (carbs) profile.goalCarbs = carbs;
+    const fat = parseInt(overlay.querySelector('#p-fat').value); if (fat) profile.goalFat = fat;
     localStorage.setItem('fitcoach-profile', JSON.stringify(profile));
     close();
     // Re-render profile screen

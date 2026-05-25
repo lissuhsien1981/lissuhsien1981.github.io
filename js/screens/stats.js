@@ -4,6 +4,23 @@ import {api} from '../api.js';
 let activeTab = 'stats';
 let todayFoodEntries = [];
 
+function foodCacheKey(date) { return `fitcoach-food-cache-${date}`; }
+function saveFoodCache(date, entries) {
+  localStorage.setItem(foodCacheKey(date), JSON.stringify(entries));
+}
+function loadFoodCache(date) {
+  try { return JSON.parse(localStorage.getItem(foodCacheKey(date)) || '[]'); } catch { return []; }
+}
+function getNutritionGoals() {
+  const p = JSON.parse(localStorage.getItem('fitcoach-profile') || '{}');
+  return {
+    calories: p.goalCalories || 2200,
+    protein:  p.goalProtein  || 160,
+    carbs:    p.goalCarbs    || 220,
+    fat:      p.goalFat      || 65,
+  };
+}
+
 export function initStats(container) {
   const today = new Date().toISOString().split('T')[0];
 
@@ -47,13 +64,25 @@ export function initStats(container) {
 function loadFoodSection(today) {
   const section = document.getElementById('food-section');
   if (!section) return;
-  section.innerHTML = '<div class="loading">載入中...</div>';
+  const cached = loadFoodCache(today);
+  if (cached.length) {
+    todayFoodEntries = cached;
+    renderFoodSection(today);
+  } else {
+    section.innerHTML = '<div class="loading">載入中...</div>';
+  }
   api.getTodayFood(today).then(entries => {
-    todayFoodEntries = entries || [];
-    renderFoodSection(today);
+    if (Array.isArray(entries) && entries.length > 0) {
+      todayFoodEntries = entries;
+      saveFoodCache(today, todayFoodEntries);
+      renderFoodSection(today);
+    } else if (!cached.length) {
+      todayFoodEntries = [];
+      renderFoodSection(today);
+    }
+    // If API returns empty but cache had data, keep the cached display as-is
   }).catch(() => {
-    todayFoodEntries = [];
-    renderFoodSection(today);
+    if (!cached.length) { todayFoodEntries = []; renderFoodSection(today); }
   });
 }
 
@@ -69,14 +98,57 @@ function renderFoodSection(today) {
     water: acc.water + (Number(e.waterIntake) || 0)
   }), {calories: 0, protein: 0, carbs: 0, fat: 0, water: 0});
 
+  const goals = getNutritionGoals();
   const mealIcon = {早餐: '🌅', 午餐: '☀️', 晚餐: '🌙', 點心: '🍎', 消夜: '🌛'};
+
+  function pct(val, goal) { return Math.min(100, Math.round((val / goal) * 100)); }
+  function remainStr(val, goal, unit) {
+    const rem = goal - val;
+    return rem >= 0
+      ? `<span class="food-goal-ok">剩餘 ${rem}${unit}</span>`
+      : `<span class="food-goal-over">超出 ${Math.abs(rem)}${unit}</span>`;
+  }
+  function bar(val, goal) {
+    const p = pct(val, goal);
+    const over = val > goal;
+    return `<div class="food-goal-bar-bg"><div class="food-goal-bar-fill${over ? ' over' : ''}" style="width:${p}%"></div></div>`;
+  }
 
   section.innerHTML = `
     <div class="food-date-bar">${today}</div>
 
+    <div class="food-goals-card">
+      <div class="food-goals-title">今日目標</div>
+      <div class="food-goal-row">
+        <span class="food-goal-name">卡路里</span>
+        <span class="food-goal-nums">${totals.calories} / ${goals.calories} kcal</span>
+        ${remainStr(totals.calories, goals.calories, ' kcal')}
+      </div>
+      ${bar(totals.calories, goals.calories)}
+      <div class="food-goal-row" style="margin-top:10px">
+        <span class="food-goal-name">蛋白質</span>
+        <span class="food-goal-nums">${totals.protein.toFixed(0)}g / ${goals.protein}g</span>
+        ${remainStr(totals.protein, goals.protein, 'g')}
+      </div>
+      ${bar(totals.protein, goals.protein)}
+      <div class="food-goal-row" style="margin-top:6px">
+        <span class="food-goal-name">碳水</span>
+        <span class="food-goal-nums">${totals.carbs.toFixed(0)}g / ${goals.carbs}g</span>
+        ${remainStr(totals.carbs, goals.carbs, 'g')}
+      </div>
+      ${bar(totals.carbs, goals.carbs)}
+      <div class="food-goal-row" style="margin-top:6px">
+        <span class="food-goal-name">脂肪</span>
+        <span class="food-goal-nums">${totals.fat.toFixed(0)}g / ${goals.fat}g</span>
+        ${remainStr(totals.fat, goals.fat, 'g')}
+      </div>
+      ${bar(totals.fat, goals.fat)}
+      ${totals.water > 0 ? `<div class="food-water-row" style="margin-top:10px">💧 今日水分 ${totals.water} ml</div>` : ''}
+    </div>
+
     ${todayFoodEntries.length === 0
       ? '<div class="empty">今天還沒有飲食記錄</div>'
-      : todayFoodEntries.map(e => `
+      : `<div class="section-label" style="margin-top:12px">今日記錄</div>` + todayFoodEntries.map(e => `
           <div class="food-entry-row">
             <div class="food-entry-left">
               <span class="meal-badge">${mealIcon[e.meal] || '🍽️'} ${e.meal}</span>
@@ -85,30 +157,6 @@ function renderFoodSection(today) {
             <span class="food-entry-cal">${e.calories ? e.calories + ' kcal' : '--'}</span>
           </div>
         `).join('')}
-
-    ${todayFoodEntries.length > 0 ? `
-      <div class="food-totals-card">
-        <div class="food-totals-row">
-          <div class="food-total-item accent">
-            <div class="food-total-val">${totals.calories}</div>
-            <div class="food-total-label">卡路里</div>
-          </div>
-          <div class="food-total-item">
-            <div class="food-total-val">${totals.protein.toFixed(1)}g</div>
-            <div class="food-total-label">蛋白質</div>
-          </div>
-          <div class="food-total-item">
-            <div class="food-total-val">${totals.carbs.toFixed(1)}g</div>
-            <div class="food-total-label">碳水</div>
-          </div>
-          <div class="food-total-item">
-            <div class="food-total-val">${totals.fat.toFixed(1)}g</div>
-            <div class="food-total-label">脂肪</div>
-          </div>
-        </div>
-        ${totals.water > 0 ? `<div class="food-water-row">💧 今日水分 ${totals.water} ml</div>` : ''}
-      </div>
-    ` : ''}
 
     <button class="btn-primary" id="add-food-btn" style="margin-top:16px">＋ 新增飲食</button>
 
@@ -275,6 +323,7 @@ function bindFoodForm(today) {
     try {
       await api.logFood(data);
       todayFoodEntries.push(data);
+      saveFoodCache(today, todayFoodEntries);
       renderFoodSection(today);
     } catch {
       alert('記錄失敗，請重試');
