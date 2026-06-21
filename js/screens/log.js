@@ -10,6 +10,7 @@ let setNum = 1;
 let timer = null;
 let numpad = null;
 let selectedRestSecs = 120;
+let logMode = 'strength'; // 'strength' | 'cardio' — user switches manually
 
 const TIMED_EXERCISES = ['棒式', '側棒式', '平板支撐', 'plank'];
 const BODYWEIGHT_EXERCISES = ['引體向上', '雙槓撐體', '伏地挺身', '卷腹', '腹輪', '懸吊抬腿'];
@@ -28,6 +29,7 @@ export function setCurrentExercise(ex) {
   currentExercise = ex;
   setHistory = [];
   setNum = 1;
+  logMode = 'strength';
 }
 
 export function initLog(container) {
@@ -38,12 +40,6 @@ export function initLog(container) {
   renderLog(container);
 }
 
-function isCardio(ex) {
-  if (!ex) return false;
-  if (ex.type === 'cardio') return true;
-  const keywords = ['cardio', '跑步', '自行車', '有氧', 'hiit', '橢圓', '游泳', '跳繩', '划步'];
-  return keywords.some(k => (ex.exercise || '').toLowerCase().includes(k));
-}
 
 function fmtSecs(s) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -51,13 +47,12 @@ function fmtSecs(s) {
 
 function renderLog(container) {
   const ex = currentExercise;
-  const cardio = isCardio(ex);
   const presets = [60, 90, 120, 180];
   const presetLabels = {60: '1:00', 90: '1:30', 120: '2:00', 180: '3:00'};
 
   container.innerHTML = `
     <div class="header">
-      <div class="header-sub">${ex.exercise}${cardio ? ' · 有氧' : ` · 第 ${setNum} 組`}</div>
+      <div class="header-sub" id="log-header-sub">${ex.exercise} · 第 ${setNum} 組</div>
       <h1>記錄</h1>
     </div>
     <div class="card log-timer">
@@ -68,8 +63,12 @@ function renderLog(container) {
       <div class="log-timer-time" id="timer-display">${fmtSecs(selectedRestSecs)}</div>
       <div class="log-timer-status" id="timer-status">完成一組後開始倒計時</div>
     </div>
+    <div class="mode-toggle">
+      <button class="mode-btn${logMode === 'strength' ? ' active' : ''}" data-mode="strength">重訓</button>
+      <button class="mode-btn${logMode === 'cardio' ? ' active' : ''}" data-mode="cardio">有氧</button>
+    </div>
     <div id="input-area"></div>
-    <button class="btn-primary" id="log-btn">${cardio ? '完成有氧訓練 ✓' : '完成這組 ✓'}</button>
+    <button class="btn-primary" id="log-btn">${logMode === 'cardio' ? '完成有氧訓練 ✓' : '完成這組 ✓'}</button>
     <div class="card" id="history-area">
       <div class="section-label" style="padding:0 0 10px">本日記錄</div>
       <div id="history-list"><div class="empty" style="padding:8px 0">尚無記錄</div></div>
@@ -88,6 +87,11 @@ function renderLog(container) {
     });
   });
 
+  // Mode toggle buttons
+  container.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchMode(btn.dataset.mode, container));
+  });
+
   // Init countdown timer
   if (timer) timer.stop();
   timer = new RestTimer(
@@ -102,43 +106,57 @@ function renderLog(container) {
     }
   );
 
-  // Input area
-  if (cardio) {
-    renderCardioInput(document.getElementById('input-area'), ex);
-  } else {
-    const mode = isTimed(ex) ? 'timed' : (isBodyweight(ex) ? 'bodyweight' : 'standard');
-    numpad = new Numpad(document.getElementById('input-area'), {
-      onWeightChange: () => {},
-      onRepsChange: () => {}
-    }, mode);
-    if (ex.weightTarget || ex.reps) numpad.setDefaults(ex.weightTarget || 0, ex.reps);
-  }
+  renderInputArea(ex);
 
   document.getElementById('log-btn').addEventListener('click', () => logCurrentSet(container));
+
+  // Restore any sets already logged this session (e.g. after tab switch)
+  renderHistory();
 }
 
-function renderCardioInput(container, ex) {
-  container.innerHTML = `
-    <div class="cardio-inputs">
-      <div class="cardio-field">
-        <label class="cardio-label">時間（分鐘）</label>
-        <input type="number" id="cardio-duration" class="cardio-input"
-          placeholder="${ex.duration || 30}" min="1" max="180"
-          value="${ex.duration || ''}">
+function renderInputArea(ex) {
+  const area = document.getElementById('input-area');
+  if (!area) return;
+  if (logMode === 'cardio') {
+    area.innerHTML = `
+      <div class="cardio-inputs">
+        <div class="cardio-field">
+          <label class="cardio-label">時間（分鐘）</label>
+          <input type="number" id="cardio-duration" class="cardio-input"
+            placeholder="${ex.duration || 30}" min="1" max="180"
+            value="${ex.duration || ''}">
+        </div>
+        <div class="cardio-field">
+          <label class="cardio-label">平均心率 bpm</label>
+          <input type="number" id="cardio-hr" class="cardio-input"
+            placeholder="145" min="60" max="220"
+            value="${ex.targetHR || ''}">
+        </div>
       </div>
-      <div class="cardio-field">
-        <label class="cardio-label">平均心率 bpm</label>
-        <input type="number" id="cardio-hr" class="cardio-input"
-          placeholder="145" min="60" max="220"
-          value="${ex.targetHR || ''}">
-      </div>
-    </div>
-  `;
+    `;
+    numpad = null;
+  } else {
+    const mode = isTimed(ex) ? 'timed' : (isBodyweight(ex) ? 'bodyweight' : 'standard');
+    numpad = new Numpad(area, {onWeightChange: () => {}, onRepsChange: () => {}}, mode);
+    if (ex.weightTarget || ex.reps) numpad.setDefaults(ex.weightTarget || 0, ex.reps);
+  }
+}
+
+function switchMode(mode, container) {
+  logMode = mode;
+  container.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  const btn = document.getElementById('log-btn');
+  if (btn) btn.textContent = mode === 'cardio' ? '完成有氧訓練 ✓' : '完成這組 ✓';
+  const headerSub = document.getElementById('log-header-sub');
+  if (headerSub) headerSub.textContent = mode === 'cardio'
+    ? `${currentExercise.exercise} · 有氧`
+    : `${currentExercise.exercise} · 第 ${setNum} 組`;
+  renderInputArea(currentExercise);
 }
 
 async function logCurrentSet(container) {
   const ex = currentExercise;
-  const cardio = isCardio(ex);
+  const cardio = logMode === 'cardio';
   const today = new Date().toISOString().split('T')[0];
   let record;
 
@@ -165,8 +183,8 @@ async function logCurrentSet(container) {
   window.dispatchEvent(new CustomEvent('set-logged', {detail: {exercise: ex.exercise, setNum}}));
 
   setNum++;
-  const header = container.querySelector('.header-sub');
-  if (header && !cardio) header.textContent = `${ex.exercise} · 第 ${setNum} 組`;
+  const headerSub = document.getElementById('log-header-sub');
+  if (headerSub && !cardio) headerSub.textContent = `${ex.exercise} · 第 ${setNum} 組`;
 
   renderHistory();
 
@@ -178,10 +196,14 @@ async function logCurrentSet(container) {
   timer.start(selectedRestSecs);
   if ('vibrate' in navigator) navigator.vibrate(50);
 
+  const btn = document.getElementById('log-btn');
+  if (btn) btn.disabled = true;
   try {
     await api.logSet(record);
   } catch {
     storage.queue(record);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 

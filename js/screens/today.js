@@ -1,17 +1,16 @@
 // js/screens/today.js
 import {api} from '../api.js';
 
-// Workout sessions — decoupled from calendar days so Sam can pick any day's workout
+// Workout sessions — picked freely, not tied to calendar weekday
 const SESSIONS = [
-  {day: 'Monday',    label: '腿日',     short: '腿日'},
-  {day: 'Tuesday',   label: '胸+三頭',  short: '胸三'},
-  {day: 'Wednesday', label: '背+二頭',  short: '背二'},
-  {day: 'Thursday',  label: '肩+核心',  short: '肩核'},
-  {day: 'Friday',    label: '有氧輕腿', short: '有氧1'},
-  {day: 'Saturday',  label: '有氧輕上', short: '有氧2'},
-  {day: 'Sunday',    label: '休息日',   short: '休息'},
+  {day: '腿日',  label: '腿日',     short: '腿日'},
+  {day: '胸三',  label: '胸+三頭',  short: '胸三'},
+  {day: '背二',  label: '背+二頭',  short: '背二'},
+  {day: '肩核',  label: '肩+核心',  short: '肩核'},
+  {day: '有氧1', label: '有氧輕腿', short: '有氧1'},
+  {day: '有氧2', label: '有氧輕上', short: '有氧2'},
+  {day: '休息',  label: '休息日',   short: '休息'},
 ];
-const CALENDAR_DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 const EXERCISE_STRENGTH = ['深蹲','腿壓','羅馬尼亞硬舉','腿彎舉','腿伸展','小腿提踵','哈克深蹲','保加利亞分腿蹲','弓步蹲','硬舉','臥推','上斜臥推','下斜臥推','飛鳥','引體向上','坐姿划船','高位下拉','單臂啞鈴划船','T-Bar划船','三頭下壓','法式彎舉','窄握臥推','雙槓撐體','二頭彎舉','錘式彎舉','集中彎舉','肩推','側平舉','前平舉','臉拉','聳肩','卷腹','棒式','腹輪','懸吊抬腿'];
 const EXERCISE_CARDIO = ['跑步','自行車','橢圓機','游泳','跳繩','划步機','爬山機','拳擊有氧','高強度間歇'];
@@ -37,8 +36,8 @@ function markDayComplete(day) { localStorage.setItem(completeKey(day), '1'); }
 
 // ── Init ──────────────────────────────────────────────────────────────────
 export function initToday(container) {
-  const todayDayName = CALENDAR_DAYS[new Date().getDay()];
-  const defaultSession = SESSIONS.find(s => s.day === todayDayName) || SESSIONS[0];
+  const lastDay = localStorage.getItem('fitcoach-last-session');
+  const defaultSession = (lastDay && SESSIONS.find(s => s.day === lastDay)) || SESSIONS[0];
   let selectedSession = defaultSession;
 
   container.innerHTML = `
@@ -73,6 +72,7 @@ export function initToday(container) {
 
   function loadDay(session) {
     selectedSession = session;
+    localStorage.setItem('fitcoach-last-session', session.day);
     container.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('active', b.dataset.day === session.day));
     document.getElementById('today-content').innerHTML = '<div class="loading">載入中...</div>';
     api.getTodayWorkout(session.day).then(exercises => {

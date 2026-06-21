@@ -29,11 +29,11 @@ function setupSheets() {
   const plan = ss.getSheetByName('Training Plan');
   if (plan.getLastRow() < 2) {
     plan.getRange(2, 1, 5, 7).setValues([
-      [1,'Monday','Squat 深蹲',4,8,60,'恢復期，專注技術'],
-      [1,'Monday','Leg Press 腿推',4,12,100,''],
-      [1,'Monday','RDL 羅馬尼亞硬舉',3,10,50,''],
-      [1,'Monday','Leg Curl 腿彎舉',3,15,0,''],
-      [1,'Monday','Leg Extension 腿伸展',3,15,0,'']
+      [1,'腿日','Squat 深蹲',4,8,60,'恢復期，專注技術'],
+      [1,'腿日','Leg Press 腿推',4,12,100,''],
+      [1,'腿日','RDL 羅馬尼亞硬舉',3,10,50,''],
+      [1,'腿日','Leg Curl 腿彎舉',3,15,0,''],
+      [1,'腿日','Leg Extension 腿伸展',3,15,0,'']
     ]);
   }
 
@@ -50,49 +50,49 @@ function populatePlan() {
   if (lastRow > 1) plan.getRange(2, 1, lastRow - 1, 7).clearContent();
 
   const rows = [
-    // Week 1 — Monday: Legs
-    [1,'Monday','Squat 深蹲',4,8,60,'恢復期，專注技術'],
-    [1,'Monday','Leg Press 腿推',4,12,100,''],
-    [1,'Monday','Romanian Deadlift 羅馬尼亞硬舉',3,10,50,''],
-    [1,'Monday','Leg Curl 腿彎舉',3,15,0,'輕重量，感受肌肉'],
-    [1,'Monday','Leg Extension 腿伸展',3,15,0,''],
-    [1,'Monday','Calf Raise 小腿提踵',4,20,0,''],
+    // 腿日
+    [1,'腿日','Squat 深蹲',4,8,60,'恢復期，專注技術'],
+    [1,'腿日','Leg Press 腿推',4,12,100,''],
+    [1,'腿日','Romanian Deadlift 羅馬尼亞硬舉',3,10,50,''],
+    [1,'腿日','Leg Curl 腿彎舉',3,15,0,'輕重量，感受肌肉'],
+    [1,'腿日','Leg Extension 腿伸展',3,15,0,''],
+    [1,'腿日','Calf Raise 小腿提踵',4,20,0,''],
 
-    // Week 1 — Tuesday: Chest + Triceps
-    [1,'Tuesday','Bench Press 臥推',4,8,60,'專注胸肌收縮'],
-    [1,'Tuesday','Incline DB Press 上斜啞鈴推',3,10,20,'每手'],
-    [1,'Tuesday','Cable Fly 繩索夾胸',3,15,0,'頂峰收縮停頓'],
-    [1,'Tuesday','Dips 撐體',3,10,0,'體重'],
-    [1,'Tuesday','Tricep Pushdown 三頭下壓',3,15,0,''],
-    [1,'Tuesday','Overhead Tricep Extension 過頭三頭伸展',3,12,0,''],
+    // 胸三（胸+三頭）
+    [1,'胸三','Bench Press 臥推',4,8,60,'專注胸肌收縮'],
+    [1,'胸三','Incline DB Press 上斜啞鈴推',3,10,20,'每手'],
+    [1,'胸三','Cable Fly 繩索夾胸',3,15,0,'頂峰收縮停頓'],
+    [1,'胸三','Dips 撐體',3,10,0,'體重'],
+    [1,'胸三','Tricep Pushdown 三頭下壓',3,15,0,''],
+    [1,'胸三','Overhead Tricep Extension 過頭三頭伸展',3,12,0,''],
 
-    // Week 1 — Wednesday: Back + Biceps
-    [1,'Wednesday','Pull-up 引體向上',4,6,0,'體重，做到力竭'],
-    [1,'Wednesday','Barbell Row 槓鈴划船',4,8,50,''],
-    [1,'Wednesday','Lat Pulldown 高拉',3,12,60,''],
-    [1,'Wednesday','Seated Cable Row 坐姿繩索划船',3,12,50,''],
-    [1,'Wednesday','Barbell Curl 槓鈴彎舉',3,10,30,''],
-    [1,'Wednesday','Hammer Curl 錘式彎舉',3,12,14,'每手'],
+    // 背二（背+二頭）
+    [1,'背二','Pull-up 引體向上',4,6,0,'體重，做到力竭'],
+    [1,'背二','Barbell Row 槓鈴划船',4,8,50,''],
+    [1,'背二','Lat Pulldown 高拉',3,12,60,''],
+    [1,'背二','Seated Cable Row 坐姿繩索划船',3,12,50,''],
+    [1,'背二','Barbell Curl 槓鈴彎舉',3,10,30,''],
+    [1,'背二','Hammer Curl 錘式彎舉',3,12,14,'每手'],
 
-    // Week 1 — Thursday: Shoulders + Core
-    [1,'Thursday','Overhead Press 肩推',4,8,40,'槓鈴或啞鈴'],
-    [1,'Thursday','Lateral Raise 側平舉',4,15,8,'每手，控制離心'],
-    [1,'Thursday','Front Raise 前平舉',3,12,8,'每手'],
-    [1,'Thursday','Rear Delt Fly 後三角飛鳥',3,15,0,'繩索或啞鈴'],
-    [1,'Thursday','Plank 棒式',3,60,0,'秒，穩定核心'],
-    [1,'Thursday','Ab Wheel 健腹輪',3,10,0,''],
+    // 肩核（肩+核心）
+    [1,'肩核','Overhead Press 肩推',4,8,40,'固定 40kg，不追加重'],
+    [1,'肩核','Lateral Raise 側平舉',4,15,8,'每手，控制離心'],
+    [1,'肩核','Front Raise 前平舉',3,12,8,'每手'],
+    [1,'肩核','Face Pull 臉拉',3,15,0,'繩索，肘高於肩'],
+    [1,'肩核','Plank 棒式',3,60,0,'秒，穩定核心'],
+    [1,'肩核','Ab Wheel 健腹輪',3,10,0,''],
 
-    // Week 1 — Friday: Cardio + Light Legs
-    [1,'Friday','Treadmill Zone2 跑步機有氧',1,30,0,'分鐘，心率 130-145 bpm'],
-    [1,'Friday','Walking Lunge 行走弓箭步',3,12,0,'每腿，體重'],
-    [1,'Friday','Hip Thrust 臀橋',3,15,40,''],
-    [1,'Friday','Step-up 登階',3,10,0,'每腿，體重'],
+    // 有氧1（有氧輕腿）
+    [1,'有氧1','Treadmill Zone2 跑步機有氧',1,45,0,'分鐘，心率 130-145 bpm'],
+    [1,'有氧1','Walking Lunge 行走弓箭步',3,12,0,'每腿，體重'],
+    [1,'有氧1','Hip Thrust 臀橋',3,15,40,''],
+    [1,'有氧1','Step-up 登階',3,10,0,'每腿，體重'],
 
-    // Week 1 — Saturday: Cardio + Light Upper
-    [1,'Saturday','Treadmill Zone2 跑步機有氧',1,25,0,'分鐘，心率 130-145 bpm'],
-    [1,'Saturday','Push-up 伏地挺身',3,15,0,'體重'],
-    [1,'Saturday','DB Row 啞鈴划船',3,12,16,'每手'],
-    [1,'Saturday','Face Pull 臉拉',3,15,0,''],
+    // 有氧2（有氧輕上）
+    [1,'有氧2','Treadmill Zone2 跑步機有氧',1,40,0,'分鐘，心率 130-145 bpm'],
+    [1,'有氧2','Push-up 伏地挺身',3,15,0,'體重'],
+    [1,'有氧2','DB Row 啞鈴划船',3,12,16,'每手'],
+    [1,'有氧2','Face Pull 臉拉',3,15,0,''],
   ];
 
   plan.getRange(2, 1, rows.length, 7).setValues(rows);
