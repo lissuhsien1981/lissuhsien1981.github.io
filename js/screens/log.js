@@ -29,7 +29,7 @@ export function setCurrentExercise(ex) {
   currentExercise = ex;
   setHistory = [];
   setNum = 1;
-  logMode = 'strength';
+  logMode = ex.isCardio ? 'cardio' : 'strength';
 }
 
 export function initLog(container) {
@@ -52,7 +52,7 @@ function renderLog(container) {
 
   container.innerHTML = `
     <div class="header">
-      <div class="header-sub" id="log-header-sub">${ex.exercise} · 第 ${setNum} 組</div>
+      <div class="header-sub" id="log-header-sub">${ex.exercise} · ${logMode === 'cardio' ? '有氧' : `第 ${setNum} 組`}</div>
       <h1>記錄</h1>
     </div>
     <div class="card log-timer">
@@ -123,8 +123,8 @@ function renderInputArea(ex) {
         <div class="cardio-field">
           <label class="cardio-label">時間（分鐘）</label>
           <input type="number" id="cardio-duration" class="cardio-input"
-            placeholder="${ex.duration || 30}" min="1" max="180"
-            value="${ex.duration || ''}">
+            placeholder="${ex.reps || ex.duration || 30}" min="1" max="180"
+            value="${ex.reps || ex.duration || ''}">
         </div>
         <div class="cardio-field">
           <label class="cardio-label">平均心率 bpm</label>

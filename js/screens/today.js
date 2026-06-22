@@ -210,7 +210,7 @@ function makeExerciseCard(ex, index, session) {
     });
 
     card.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('navigate-to-log', {detail: {...ex, dayType: session.day}}));
+      window.dispatchEvent(new CustomEvent('navigate-to-log', {detail: {...ex, dayType: session.day, isCardio: cardio}}));
     });
 
     checkAllDone(card);
