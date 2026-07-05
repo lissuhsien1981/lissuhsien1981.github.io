@@ -9,6 +9,12 @@ const SESSIONS = [
   {day: '肩核',  label: '肩+核心',  short: '肩核'},
   {day: '有氧1', label: '有氧輕腿', short: '有氧1'},
   {day: '有氧2', label: '有氧輕上', short: '有氧2'},
+  {day: '居家-下肢核心',     label: '居家｜下肢核心',     short: '居家腿核'},
+  {day: '居家-拉背二頭',     label: '居家｜拉背二頭',     short: '居家背二'},
+  {day: '居家-推胸三頭有氧', label: '居家｜推胸三頭有氧', short: '居家推氧'},
+  {day: '居家-下肢爆發核心', label: '居家｜下肢爆發核心', short: '居家爆發'},
+  {day: '居家-拉肩變化',     label: '居家｜拉肩變化',     short: '居家拉肩'},
+  {day: '居家-全身循環減脂', label: '居家｜全身循環減脂', short: '居家循環'},
   {day: '休息',  label: '休息日',   short: '休息'},
 ];
 
