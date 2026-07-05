@@ -88,6 +88,19 @@ body {
 }
 .set-dot.done { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
+.mode-switcher {
+  display: flex; gap: 8px; padding: 8px 20px 0;
+}
+.mode-btn {
+  flex: 1; padding: 10px; text-align: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text2);
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.mode-btn.active {
+  background: var(--accent); border-color: var(--accent); color: #0f0f0f;
+}
+
 .day-switcher {
   display: flex; gap: 6px; padding: 8px 20px 12px;
   overflow-x: auto; -webkit-overflow-scrolling: touch;

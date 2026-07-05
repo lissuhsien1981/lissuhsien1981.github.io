@@ -2,20 +2,31 @@
 import {api} from '../api.js';
 
 // Workout sessions — picked freely, not tied to calendar weekday
-const SESSIONS = [
+const REST_SESSION = {day: '休息', label: '休息日', short: '休息'};
+
+const GYM_SESSIONS = [
   {day: '腿日',  label: '腿日',     short: '腿日'},
   {day: '胸三',  label: '胸+三頭',  short: '胸三'},
   {day: '背二',  label: '背+二頭',  short: '背二'},
   {day: '肩核',  label: '肩+核心',  short: '肩核'},
   {day: '有氧1', label: '有氧輕腿', short: '有氧1'},
   {day: '有氧2', label: '有氧輕上', short: '有氧2'},
-  {day: '居家-下肢核心',     label: '居家｜下肢核心',     short: '居家腿核'},
-  {day: '居家-拉背二頭',     label: '居家｜拉背二頭',     short: '居家背二'},
-  {day: '居家-推胸三頭有氧', label: '居家｜推胸三頭有氧', short: '居家推氧'},
-  {day: '居家-下肢爆發核心', label: '居家｜下肢爆發核心', short: '居家爆發'},
-  {day: '居家-拉肩變化',     label: '居家｜拉肩變化',     short: '居家拉肩'},
-  {day: '居家-全身循環減脂', label: '居家｜全身循環減脂', short: '居家循環'},
-  {day: '休息',  label: '休息日',   short: '休息'},
+  REST_SESSION,
+];
+
+const HOME_SESSIONS = [
+  {day: '居家-下肢核心',     label: '居家｜下肢核心',     short: '下肢核心'},
+  {day: '居家-拉背二頭',     label: '居家｜拉背二頭',     short: '拉背二頭'},
+  {day: '居家-推胸三頭有氧', label: '居家｜推胸三頭有氧', short: '推胸有氧'},
+  {day: '居家-下肢爆發核心', label: '居家｜下肢爆發核心', short: '下肢爆發'},
+  {day: '居家-拉肩變化',     label: '居家｜拉肩變化',     short: '拉肩變化'},
+  {day: '居家-全身循環減脂', label: '居家｜全身循環減脂', short: '循環減脂'},
+  REST_SESSION,
+];
+
+const MODES = [
+  {id: 'gym',  label: '🏋️ 健身房', sessions: GYM_SESSIONS},
+  {id: 'home', label: '🏠 居家',   sessions: HOME_SESSIONS},
 ];
 
 const EXERCISE_STRENGTH = ['深蹲','腿壓','羅馬尼亞硬舉','腿彎舉','腿伸展','小腿提踵','哈克深蹲','保加利亞分腿蹲','弓步蹲','硬舉','臥推','上斜臥推','下斜臥推','飛鳥','引體向上','坐姿划船','高位下拉','單臂啞鈴划船','T-Bar划船','三頭下壓','法式彎舉','窄握臥推','雙槓撐體','二頭彎舉','錘式彎舉','集中彎舉','肩推','側平舉','前平舉','臉拉','聳肩','卷腹','棒式','腹輪','懸吊抬腿'];
@@ -42,9 +53,14 @@ function markDayComplete(day) { localStorage.setItem(completeKey(day), '1'); }
 
 // ── Init ──────────────────────────────────────────────────────────────────
 export function initToday(container) {
-  const lastDay = localStorage.getItem('fitcoach-last-session');
-  const defaultSession = (lastDay && SESSIONS.find(s => s.day === lastDay)) || SESSIONS[0];
-  let selectedSession = defaultSession;
+  let currentMode = MODES.find(m => m.id === localStorage.getItem('fitcoach-mode')) || MODES[0];
+
+  function pickDefaultSession(mode) {
+    const lastDay = localStorage.getItem(`fitcoach-last-session-${mode.id}`);
+    return (lastDay && mode.sessions.find(s => s.day === lastDay)) || mode.sessions[0];
+  }
+
+  let selectedSession = pickDefaultSession(currentMode);
 
   container.innerHTML = `
     <div class="today-fixed-top">
@@ -52,14 +68,17 @@ export function initToday(container) {
         <div class="header-sub">${formatDate()}</div>
         <h1>課表</h1>
       </div>
-      <div class="day-switcher">
-        ${SESSIONS.map(s => `
-          <button class="day-btn${s.day === selectedSession.day ? ' active' : ''}" data-day="${s.day}">${s.short}</button>
+      <div class="mode-switcher">
+        ${MODES.map(m => `
+          <button class="mode-btn${m.id === currentMode.id ? ' active' : ''}" data-mode="${m.id}">${m.label}</button>
         `).join('')}
       </div>
+      <div class="day-switcher"></div>
     </div>
     <div id="today-content" class="today-scroll"><div class="loading">載入中...</div></div>
   `;
+
+  const daySwitcher = container.querySelector('.day-switcher');
 
   // Sync log-screen set completions → dot state
   window.addEventListener('set-logged', (e) => {
@@ -76,10 +95,19 @@ export function initToday(container) {
     }
   });
 
+  function renderDaySwitcher() {
+    daySwitcher.innerHTML = currentMode.sessions.map(s => `
+      <button class="day-btn${s.day === selectedSession.day ? ' active' : ''}" data-day="${s.day}">${s.short}</button>
+    `).join('');
+    daySwitcher.querySelectorAll('.day-btn').forEach(btn => {
+      btn.addEventListener('click', () => loadDay(currentMode.sessions.find(s => s.day === btn.dataset.day)));
+    });
+  }
+
   function loadDay(session) {
     selectedSession = session;
-    localStorage.setItem('fitcoach-last-session', session.day);
-    container.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('active', b.dataset.day === session.day));
+    localStorage.setItem(`fitcoach-last-session-${currentMode.id}`, session.day);
+    daySwitcher.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('active', b.dataset.day === session.day));
     document.getElementById('today-content').innerHTML = '<div class="loading">載入中...</div>';
     api.getTodayWorkout(session.day).then(exercises => {
       renderToday(container, exercises, session);
@@ -88,10 +116,18 @@ export function initToday(container) {
     });
   }
 
-  container.querySelectorAll('.day-btn').forEach(btn => {
-    btn.addEventListener('click', () => loadDay(SESSIONS.find(s => s.day === btn.dataset.day)));
+  container.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentMode = MODES.find(m => m.id === btn.dataset.mode);
+      localStorage.setItem('fitcoach-mode', currentMode.id);
+      container.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === currentMode.id));
+      selectedSession = pickDefaultSession(currentMode);
+      renderDaySwitcher();
+      loadDay(selectedSession);
+    });
   });
 
+  renderDaySwitcher();
   loadDay(selectedSession);
 }
 
