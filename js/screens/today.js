@@ -39,6 +39,13 @@ function isCardioEx(ex) {
   return kw.some(k => (ex.exercise || '').toLowerCase().includes(k));
 }
 
+// Training Plan rows encode timed (seconds) targets by starting Notes with "秒"
+// (e.g. Plank, 秒制循環 stations) — Reps then holds a duration, not a rep count.
+function isTimedEx(ex) {
+  if (!ex) return false;
+  return typeof ex.notes === 'string' && ex.notes.trim().startsWith('秒');
+}
+
 // ── Dot-state persistence ─────────────────────────────────────────────────
 function dotKey(day, exercise) {
   return `fitcoach-sets-${new Date().toISOString().split('T')[0]}-${day}-${exercise}`;
@@ -190,13 +197,14 @@ function makeExerciseCard(ex, index, session) {
   card.dataset.exercise = ex.exercise;
 
   const cardio = isCardioEx(ex);
+  const timed = !cardio && isTimedEx(ex);
 
   function renderCard() {
     const completedSets = getDotState(session.day, ex.exercise);
     const numDots = cardio ? 1 : ex.sets;
     const targetStr = cardio
       ? `${ex.duration || 30} 分鐘${ex.targetHR ? ` · 目標 ${ex.targetHR} bpm` : ''}`
-      : `${ex.sets} 組 × ${ex.reps} 下${ex.weightTarget ? ` · 目標 ${ex.weightTarget} kg` : ''}`;
+      : `${ex.sets} 組 × ${ex.reps} ${timed ? '秒' : '下'}${ex.weightTarget ? ` · 目標 ${ex.weightTarget} kg` : ''}`;
 
     card.innerHTML = `
       <div class="ex-header">

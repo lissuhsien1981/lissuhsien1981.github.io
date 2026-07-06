@@ -17,6 +17,9 @@ const BODYWEIGHT_EXERCISES = ['引體向上', '雙槓撐體', '伏地挺身', '�
 
 function isTimed(ex) {
   if (!ex) return false;
+  // Training Plan rows encode timed (seconds) targets by starting Notes with "秒"
+  // (e.g. 秒制循環 stations) — falls back to name matching for manually added exercises.
+  if (typeof ex.notes === 'string' && ex.notes.trim().startsWith('秒')) return true;
   return TIMED_EXERCISES.some(k => (ex.exercise || '').toLowerCase().includes(k.toLowerCase()));
 }
 
