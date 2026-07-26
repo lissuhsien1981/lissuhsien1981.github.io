@@ -100,8 +100,9 @@ function populatePlan() {
 }
 
 // ─── RUN THIS ONCE TO APPEND WEEK 3 PPL PLAN (Jeff Nippard 動作選擇/分化邏輯，固定重量) ──
-// 復健期考量：肩/膝/下背為活動角度、動作協調、穩定性問題（非結構性禁忌）
-// → 選機械/繩索等軌道可控動作、離心放慢 3 秒、避免衝極限重量與 drop set/rest-pause
+// 復健期考量：肩/膝/下背為活動角度、動作協調、穩定性問題（非結構性禁忌，非結構損傷）
+// → 已有實績的動作（Squat/Barbell Row/Bench Press/OHP/Dips 全程）沿用原版，維持固定重量離心3秒控制
+// → 只在真正新增/無實績的動作上選機械/繩索等軌道可控版本；下背相關的核心動作改用 Dead Bug/Pallof Press（抗旋轉，較無脊椎屈曲負荷）
 // WeightTarget 全部留 0，Sam 自行填入起跑重量
 function populatePlanWeek3_PPL() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -109,15 +110,15 @@ function populatePlanWeek3_PPL() {
 
   const rows = [
     // 推A（肩部角度友善版本）
-    [3,'推A','Machine Shoulder Press 機械肩推',3,10,0,'角度可調，離心3秒控制'],
+    [3,'推A','Overhead Press 肩推',3,8,0,'固定重量，離心3秒控制'],
     [3,'推A','Incline DB Press 上斜啞鈴推',3,8,0,'每手，肩胛穩定，避免底部過度伸展'],
     [3,'推A','Cable Fly 繩索夾胸',3,12,0,'行程可控，頂峰收縮停頓'],
-    [3,'推A','Dips 撐體（半程）',3,10,0,'只到肩膀舒適角度，不到底'],
+    [3,'推A','Dips 撐體',3,10,0,'全程，離心3秒控制'],
     [3,'推A','Cable Tricep Pushdown 三頭下壓',3,12,0,''],
     [3,'推A','Cable Lateral Raise 繩索側平舉',3,12,0,'每邊，輕重量，控制離心'],
 
     // 拉A（下背友善版本）
-    [3,'拉A','Chest-Supported Row 俯臥划船',3,10,0,'胸靠支撐，保護下背'],
+    [3,'拉A','Barbell Row 槓鈴划船',3,8,0,'離心3秒控制，下背中立'],
     [3,'拉A','Lat Pulldown 高拉',3,10,0,'垂直路徑，肩部友善'],
     [3,'拉A','Cable Pullover 繩索背闊拉',3,12,0,'控制行程，不甩動'],
     [3,'拉A','Face Pull 臉拉',3,15,0,'肘高於肩，肩關節穩定訓練'],
@@ -133,7 +134,6 @@ function populatePlanWeek3_PPL() {
     [3,'腿A','Dead Bug 死蟲式',3,10,0,'每邊，脊椎中立核心穩定，取代負重捲腹'],
 
     // 推B
-    [3,'推B','Landmine Press 地雷管推舉',3,8,0,'每手，肩部角度友善替代槓鈴肩推'],
     [3,'推B','Bench Press 臥推',3,8,0,'中等重量不追極限，離心3秒'],
     [3,'推B','Low-to-High Cable Crossover 繩索下對上夾胸',3,10,0,''],
     [3,'推B','Overhead Tricep Extension 過頭三頭伸展',3,10,0,'注意肩部活動角度'],
@@ -150,7 +150,7 @@ function populatePlanWeek3_PPL() {
 
     // 腿B（下背友善版本，用 RDL 取代 Sumo Deadlift）
     [3,'腿B','Romanian Deadlift 羅馬尼亞硬舉',3,8,0,'下背友善，控制行程不衝重量'],
-    [3,'腿B','Machine Hack Squat 機械哈克蹲',3,10,0,'固定軌道，膝蓋友善，控制深度'],
+    [3,'腿B','Squat 深蹲',3,8,0,'離心3秒控制，深度依當天狀況調整'],
     [3,'腿B','Unilateral Hip Thrust 單腳臀橋',2,12,0,'每邊'],
     [3,'腿B','Lying Leg Curl 俯臥腿彎舉',2,10,0,''],
     [3,'腿B','Seated Calf Raise 坐姿提踵',3,12,0,''],
