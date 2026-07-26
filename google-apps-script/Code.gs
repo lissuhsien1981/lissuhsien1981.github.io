@@ -110,7 +110,7 @@ function populatePlanWeek3_PPL() {
 
   const rows = [
     // 推A（肩部角度友善版本）
-    [3,'推A','Overhead Press 肩推',3,8,0,'固定重量，離心3秒控制'],
+    [3,'推A','DB Overhead Press 啞鈴肩推',3,8,0,'每手，固定重量，離心3秒控制'],
     [3,'推A','Incline DB Press 上斜啞鈴推',3,8,0,'每手，肩胛穩定，避免底部過度伸展'],
     [3,'推A','Cable Fly 繩索夾胸',3,12,0,'行程可控，頂峰收縮停頓'],
     [3,'推A','Dips 撐體',3,10,0,'全程，離心3秒控制'],

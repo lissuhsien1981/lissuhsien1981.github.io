@@ -77,6 +77,7 @@ body {
 .exercise-card.done { opacity: 0.5; }
 .ex-name { font-size: 16px; font-weight: 600; }
 .ex-target { font-size: 13px; color: var(--text2); margin-top: 3px; }
+.ex-note { font-size: 12px; color: var(--accent); margin-top: 4px; line-height: 1.4; }
 .ex-sets { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
 .set-dot {

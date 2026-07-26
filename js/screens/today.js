@@ -222,6 +222,7 @@ function makeExerciseCard(ex, index, session) {
         <div>
           <div class="ex-name">${ex.exercise}${cardio ? ' <span class="ex-type-badge">有氧</span>' : ''}</div>
           <div class="ex-target">${targetStr}</div>
+          ${ex.notes ? `<div class="ex-note">💡 ${ex.notes}</div>` : ''}
         </div>
         <button class="ex-edit-btn" title="調整">✏️</button>
       </div>
