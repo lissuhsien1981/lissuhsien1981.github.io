@@ -24,9 +24,20 @@ const HOME_SESSIONS = [
   REST_SESSION,
 ];
 
+const PPL_SESSIONS = [
+  {day: '推A', label: 'PPL｜推A', short: '推A'},
+  {day: '拉A', label: 'PPL｜拉A', short: '拉A'},
+  {day: '腿A', label: 'PPL｜腿A', short: '腿A'},
+  {day: '推B', label: 'PPL｜推B', short: '推B'},
+  {day: '拉B', label: 'PPL｜拉B', short: '拉B'},
+  {day: '腿B', label: 'PPL｜腿B', short: '腿B'},
+  REST_SESSION,
+];
+
 const MODES = [
   {id: 'gym',  label: '🏋️ 健身房', sessions: GYM_SESSIONS},
   {id: 'home', label: '🏠 居家',   sessions: HOME_SESSIONS},
+  {id: 'ppl',  label: '🔁 PPL',    sessions: PPL_SESSIONS},
 ];
 
 const EXERCISE_STRENGTH = ['深蹲','腿壓','羅馬尼亞硬舉','腿彎舉','腿伸展','小腿提踵','哈克深蹲','保加利亞分腿蹲','弓步蹲','硬舉','臥推','上斜臥推','下斜臥推','飛鳥','引體向上','坐姿划船','高位下拉','單臂啞鈴划船','T-Bar划船','三頭下壓','法式彎舉','窄握臥推','雙槓撐體','二頭彎舉','錘式彎舉','集中彎舉','肩推','側平舉','前平舉','臉拉','聳肩','卷腹','棒式','腹輪','懸吊抬腿'];

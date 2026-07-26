@@ -99,6 +99,68 @@ function populatePlan() {
   Logger.log('✅ Week 1 plan populated: ' + rows.length + ' exercises across 6 days');
 }
 
+// ─── RUN THIS ONCE TO APPEND WEEK 3 PPL PLAN (Jeff Nippard 動作選擇/分化邏輯，固定重量) ──
+// 復健期考量：肩/膝/下背為活動角度、動作協調、穩定性問題（非結構性禁忌）
+// → 選機械/繩索等軌道可控動作、離心放慢 3 秒、避免衝極限重量與 drop set/rest-pause
+// WeightTarget 全部留 0，Sam 自行填入起跑重量
+function populatePlanWeek3_PPL() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const plan = ss.getSheetByName('Training Plan');
+
+  const rows = [
+    // 推A（肩部角度友善版本）
+    [3,'推A','Machine Shoulder Press 機械肩推',3,10,0,'角度可調，離心3秒控制'],
+    [3,'推A','Incline DB Press 上斜啞鈴推',3,8,0,'每手，肩胛穩定，避免底部過度伸展'],
+    [3,'推A','Cable Fly 繩索夾胸',3,12,0,'行程可控，頂峰收縮停頓'],
+    [3,'推A','Dips 撐體（半程）',3,10,0,'只到肩膀舒適角度，不到底'],
+    [3,'推A','Cable Tricep Pushdown 三頭下壓',3,12,0,''],
+    [3,'推A','Cable Lateral Raise 繩索側平舉',3,12,0,'每邊，輕重量，控制離心'],
+
+    // 拉A（下背友善版本）
+    [3,'拉A','Chest-Supported Row 俯臥划船',3,10,0,'胸靠支撐，保護下背'],
+    [3,'拉A','Lat Pulldown 高拉',3,10,0,'垂直路徑，肩部友善'],
+    [3,'拉A','Cable Pullover 繩索背闊拉',3,12,0,'控制行程，不甩動'],
+    [3,'拉A','Face Pull 臉拉',3,15,0,'肘高於肩，肩關節穩定訓練'],
+    [3,'拉A','Hammer Curl 錘式彎舉',3,10,0,'每手'],
+    [3,'拉A','Incline DB Curl 上斜啞鈴彎舉',3,10,0,'每手'],
+
+    // 腿A（膝部友善版本）
+    [3,'腿A','Leg Press 腿推',3,12,0,'控制深度不過度屈膝，離心3秒'],
+    [3,'腿A','Leg Extension 腿伸展',3,12,0,'輕中重量，控制行程避免甩動'],
+    [3,'腿A','Seated Leg Curl 坐姿腿彎舉',3,10,0,''],
+    [3,'腿A','Hip Thrust 臀橋',3,12,0,'下背友善的髖伸訓練'],
+    [3,'腿A','Standing Calf Raise 站姿提踵',3,12,0,''],
+    [3,'腿A','Dead Bug 死蟲式',3,10,0,'每邊，脊椎中立核心穩定，取代負重捲腹'],
+
+    // 推B
+    [3,'推B','Landmine Press 地雷管推舉',3,8,0,'每手，肩部角度友善替代槓鈴肩推'],
+    [3,'推B','Bench Press 臥推',3,8,0,'中等重量不追極限，離心3秒'],
+    [3,'推B','Low-to-High Cable Crossover 繩索下對上夾胸',3,10,0,''],
+    [3,'推B','Overhead Tricep Extension 過頭三頭伸展',3,10,0,'注意肩部活動角度'],
+    [3,'推B','DB Lateral Raise 21s 啞鈴側平舉21式',2,21,0,'下半程7+上半程7+全程7，輕重量'],
+    [3,'推B','Egyptian Cable Lateral Raise 埃及式繩索側平舉',3,12,0,'每邊，肩部穩定加強'],
+
+    // 拉B
+    [3,'拉B','Omni-Grip Lat Pulldown 多握距高拉',3,10,0,'每組換握距'],
+    [3,'拉B','Seated Cable Row 坐姿划船',3,10,0,''],
+    [3,'拉B','Rope Face Pull 繩索臉拉',3,15,0,''],
+    [3,'拉B','Incline DB Shrug 上斜啞鈴聳肩',3,10,0,''],
+    [3,'拉B','DB Rear Delt Fly 啞鈴反向飛鳥',3,12,0,''],
+    [3,'拉B','Cable Curl 繩索彎舉',3,10,0,''],
+
+    // 腿B（下背友善版本，用 RDL 取代 Sumo Deadlift）
+    [3,'腿B','Romanian Deadlift 羅馬尼亞硬舉',3,8,0,'下背友善，控制行程不衝重量'],
+    [3,'腿B','Machine Hack Squat 機械哈克蹲',3,10,0,'固定軌道，膝蓋友善，控制深度'],
+    [3,'腿B','Unilateral Hip Thrust 單腳臀橋',2,12,0,'每邊'],
+    [3,'腿B','Lying Leg Curl 俯臥腿彎舉',2,10,0,''],
+    [3,'腿B','Seated Calf Raise 坐姿提踵',3,12,0,''],
+    [3,'腿B','Pallof Press 帕洛夫推',3,10,0,'每邊，抗旋轉核心穩定，脊椎友善'],
+  ];
+
+  plan.getRange(plan.getLastRow() + 1, 1, rows.length, 7).setValues(rows);
+  Logger.log('✅ Week 3 PPL plan appended: ' + rows.length + ' exercises across 6 days');
+}
+
 function doGet(e) {
   if (e.parameter.token !== SECRET) return json({error: 'Unauthorized'});
   const ss = SpreadsheetApp.openById(SHEET_ID);
