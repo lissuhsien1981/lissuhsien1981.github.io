@@ -57,6 +57,7 @@ function renderLog(container) {
     <div class="header">
       <div class="header-sub" id="log-header-sub">${ex.exercise} · ${logMode === 'cardio' ? '有氧' : `第 ${setNum} 組`}</div>
       <h1>記錄</h1>
+      ${ex.notes ? `<div class="log-note">💡 ${ex.notes}</div>` : ''}
     </div>
     <div class="card log-timer">
       <div class="log-timer-label">組間休息</div>
