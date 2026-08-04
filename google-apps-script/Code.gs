@@ -1,6 +1,25 @@
 const SHEET_ID = '1bOALXfJiVJotOzz34MFrVMn6r7e45u__P-cStSS6F0U';
 const SECRET = 'fitcoach-secret-2026';
 
+// Pinned on purpose. The gemini-flash-lite-latest alias gets hot-swapped by
+// Google with every Flash-Lite release, which is how the food AI kept breaking
+// without anything here changing. Bump this deliberately, never implicitly.
+const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+
+// Asking for this schema back makes the model emit bare JSON, so we no longer
+// depend on it choosing not to wrap the answer in a markdown fence.
+const FOOD_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    description: {type: 'STRING'},
+    calories: {type: 'NUMBER'},
+    protein: {type: 'NUMBER'},
+    carbs: {type: 'NUMBER'},
+    fat: {type: 'NUMBER'}
+  },
+  required: ['description', 'calories', 'protein', 'carbs', 'fat']
+};
+
 // ─── RUN THIS ONCE TO SET UP ALL SHEETS ───────────────────────────────────
 function setupSheets() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -248,83 +267,96 @@ function getTodayFood(ss, date) {
   return json(entries);
 }
 
-function analyzeFood(data) {
+// Every error path below says what actually went wrong. The old code collapsed
+// four different failures into "無法解析辨識結果", so each outage started from
+// zero and got guessed at instead of diagnosed.
+function callGemini(parts) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) return json({error: 'GEMINI_API_KEY not set in Script Properties'});
+  if (!apiKey) return {error: 'GEMINI_API_KEY 未設定（Script Properties）'};
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
   const payload = {
-    contents: [{
-      parts: [{
-        text: `分析以下食物的營養素（台灣食物請給予準確估計），回傳 ONLY a JSON object，不要 markdown:\n"${data.text}"\nJSON格式: {"description":"食物名稱（繁體中文）","calories":0,"protein":0.0,"carbs":0.0,"fat":0.0}\n若有多種食物，加總所有數值。不確定時給合理估計值。`
-      }]
-    }]
+    contents: [{parts: parts}],
+    generationConfig: {responseMimeType: 'application/json', responseSchema: FOOD_SCHEMA}
   };
 
+  let response;
   try {
-    const response = UrlFetchApp.fetch(url, {
+    response = UrlFetchApp.fetch(url, {
       method: 'post', contentType: 'application/json',
       payload: JSON.stringify(payload), muteHttpExceptions: true
     });
-    const httpCode = response.getResponseCode();
-    const result = JSON.parse(response.getContentText());
-    if (httpCode === 429) return json({error: 'Gemini API 達到使用上限，請稍後再試'});
-    if (httpCode !== 200) return json({error: 'Gemini API 錯誤：' + httpCode});
-    if (!result.candidates || !result.candidates[0]) return json({error: '未收到 Gemini 回應'});
-    const text = result.candidates[0].content.parts[0].text.trim();
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return json({error: '無法解析辨識結果'});
-    return json(JSON.parse(match[0]));
   } catch (e) {
-    return json({error: e.message});
+    return {error: '無法連線 Gemini：' + e.message};
   }
+
+  const httpCode = response.getResponseCode();
+  const body = response.getContentText();
+  if (httpCode === 429) return {error: 'Gemini 用量已達上限，請稍後再試'};
+  if (httpCode !== 200) return {error: `Gemini HTTP ${httpCode}（${GEMINI_MODEL}）：${body.slice(0, 200)}`};
+
+  let result;
+  try {
+    result = JSON.parse(body);
+  } catch (e) {
+    return {error: 'Gemini 回應不是 JSON：' + body.slice(0, 200)};
+  }
+
+  const candidate = result.candidates && result.candidates[0];
+  if (!candidate) {
+    const blocked = result.promptFeedback && result.promptFeedback.blockReason;
+    return {error: blocked ? '請求被安全機制擋下：' + blocked : 'Gemini 未回傳任何結果'};
+  }
+
+  const text = extractText(candidate);
+  const parsed = parseFoodJson(text);
+  if (!parsed) {
+    return {error: `無法解析回應（finishReason: ${candidate.finishReason}）：${text.slice(0, 160)}`};
+  }
+  return parsed;
+}
+
+// 3.x models can return reasoning parts alongside the answer, and the answer is
+// not guaranteed to sit at parts[0] — join every non-thought part instead.
+function extractText(candidate) {
+  const parts = (candidate.content && candidate.content.parts) || [];
+  return parts
+    .filter(p => !p.thought && typeof p.text === 'string')
+    .map(p => p.text)
+    .join('')
+    .trim();
+}
+
+// responseSchema should make this a plain JSON.parse, but keep the fence strip
+// and brace scan as a net in case a future model ignores the schema.
+function parseFoodJson(text) {
+  if (!text) return null;
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {}
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch (e) {
+    return null;
+  }
+}
+
+function analyzeFood(data) {
+  if (!data.text) return json({error: '沒有收到食物描述'});
+  return json(callGemini([{
+    text: `分析以下食物的營養素（台灣食物請給予準確估計）：\n"${data.text}"\ndescription 用繁體中文寫食物名稱。若有多種食物，加總所有數值。不確定時給合理估計值。`
+  }]));
 }
 
 function recognizeFoodImage(data) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) return json({error: 'GEMINI_API_KEY not set in Script Properties'});
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
-  const payload = {
-    contents: [{
-      parts: [
-        {
-          inlineData: {
-            mimeType: data.mimeType || 'image/jpeg',
-            data: data.imageBase64
-          }
-        },
-        {
-          text: `Analyze this food image. Return ONLY a JSON object, no markdown, no explanation:
-{
-  "description": "食物名稱（繁體中文）",
-  "calories": <integer>,
-  "protein": <number with 1 decimal>,
-  "carbs": <number with 1 decimal>,
-  "fat": <number with 1 decimal>
-}
-If multiple food items are visible, describe them all and sum the nutritional values.`
-        }
-      ]
-    }]
-  };
-
-  try {
-    const response = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-    const result = JSON.parse(response.getContentText());
-    if (!result.candidates || !result.candidates[0]) return json({error: 'No response from Gemini'});
-    const text = result.candidates[0].content.parts[0].text.trim();
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return json({error: 'Could not parse food data'});
-    return json(JSON.parse(match[0]));
-  } catch (e) {
-    return json({error: e.message});
-  }
+  if (!data.imageBase64) return json({error: '沒有收到圖片'});
+  return json(callGemini([
+    {inlineData: {mimeType: data.mimeType || 'image/jpeg', data: data.imageBase64}},
+    {text: '辨識這張圖片中的食物並估計營養素。description 用繁體中文寫食物名稱。若有多種食物，全部列出並加總數值。'}
+  ]));
 }
 
 function getStats(ss) {

@@ -264,9 +264,10 @@ function bindFoodForm(today) {
       if (result.fat) document.getElementById('food-fat').value = result.fat;
       btn.textContent = '✅ 分析完成';
       status.textContent = '數據已填入，請確認後送出';
-    } catch {
+    } catch (err) {
       btn.textContent = '🤖 AI 分析文字';
-      status.textContent = '⚠️ AI 暫時無法使用，請手動填寫下方數值';
+      status.textContent = `⚠️ ${err.message || 'AI 暫時無法使用'}— 請手動填寫下方數值`;
+      console.error('[FitCoach] analyzeFood failed:', err);
       document.getElementById('food-cal').focus();
     }
     btn.disabled = false;
@@ -294,9 +295,10 @@ function bindFoodForm(today) {
       if (result.fat) document.getElementById('food-fat').value = result.fat;
       btn.textContent = '✅ 辨識完成';
       status.textContent = '數據已填入，請確認後送出';
-    } catch {
+    } catch (err) {
       btn.textContent = '📷 重新拍照';
-      status.textContent = '⚠️ AI 暫時無法使用，請手動填寫下方數值';
+      status.textContent = `⚠️ ${err.message || 'AI 暫時無法使用'}— 請手動填寫下方數值`;
+      console.error('[FitCoach] recognizeFood failed:', err);
       document.getElementById('food-cal').focus();
     }
     btn.disabled = false;
