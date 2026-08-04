@@ -216,7 +216,7 @@ function showEditModal(profile, container) {
 
       <label class="modal-label">目前訓練週期</label>
       <select class="modal-input" id="p-phase" style="-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3E%3Cpath d=%27M1 1l5 5 5-5%27 stroke=%27%23888%27 stroke-width=%271.5%27 fill=%27none%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 14px center;">
-        ${PHASES.map(p => `<option value="${p}"${(profile.phase || '傷後回歸') === p ? ' selected' : ''}>${p}</option>`).join('')}
+        ${PHASES.map(p => `<option value="${p}"${(profile.phase || '減脂期') === p ? ' selected' : ''}>${p}</option>`).join('')}
       </select>
 
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
@@ -224,21 +224,21 @@ function showEditModal(profile, container) {
         <div class="modal-row">
           <div>
             <label class="modal-label">卡路里 kcal</label>
-            <input class="modal-input" id="p-cal" type="number" min="0" placeholder="2200" value="${profile.goalCalories || ''}">
+            <input class="modal-input" id="p-cal" type="number" min="0" placeholder="2100" value="${profile.goalCalories || ''}">
           </div>
           <div>
             <label class="modal-label">蛋白質 g</label>
-            <input class="modal-input" id="p-protein" type="number" min="0" placeholder="160" value="${profile.goalProtein || ''}">
+            <input class="modal-input" id="p-protein" type="number" min="0" placeholder="175" value="${profile.goalProtein || ''}">
           </div>
         </div>
         <div class="modal-row">
           <div>
             <label class="modal-label">碳水 g</label>
-            <input class="modal-input" id="p-carbs" type="number" min="0" placeholder="220" value="${profile.goalCarbs || ''}">
+            <input class="modal-input" id="p-carbs" type="number" min="0" placeholder="190" value="${profile.goalCarbs || ''}">
           </div>
           <div>
             <label class="modal-label">脂肪 g</label>
-            <input class="modal-input" id="p-fat" type="number" min="0" placeholder="65" value="${profile.goalFat || ''}">
+            <input class="modal-input" id="p-fat" type="number" min="0" placeholder="70" value="${profile.goalFat || ''}">
           </div>
         </div>
       </div>

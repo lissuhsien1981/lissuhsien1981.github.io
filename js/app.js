@@ -4,6 +4,26 @@ import {initLog, setCurrentExercise} from './screens/log.js';
 import {initStats} from './screens/stats.js';
 import {initProfile} from './screens/profile.js';
 
+// One-time profile migration — 2026 減脂期 targets. Overwrites saved nutrition
+// goals so the new numbers land on a device that already has old ones stored;
+// bump the key to push a revised set.
+const CUT_PHASE_KEY = 'fitcoach-migration-cut-2026';
+if (!localStorage.getItem(CUT_PHASE_KEY)) {
+  let profile = {};
+  try { profile = JSON.parse(localStorage.getItem('fitcoach-profile') || '{}'); } catch {}
+  Object.assign(profile, {
+    height: 174,
+    targetWeight: 80,
+    phase: '減脂期',
+    goalCalories: 2100,
+    goalProtein: 175,
+    goalCarbs: 190,
+    goalFat: 70,
+  });
+  localStorage.setItem('fitcoach-profile', JSON.stringify(profile));
+  localStorage.setItem(CUT_PHASE_KEY, '1');
+}
+
 const screens = {
   today: {init: initToday, initialized: false},
   log: {init: initLog, initialized: false},

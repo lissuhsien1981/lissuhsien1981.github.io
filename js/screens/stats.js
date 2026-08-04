@@ -14,10 +14,10 @@ function loadFoodCache(date) {
 function getNutritionGoals() {
   const p = JSON.parse(localStorage.getItem('fitcoach-profile') || '{}');
   return {
-    calories: p.goalCalories || 2200,
-    protein:  p.goalProtein  || 160,
-    carbs:    p.goalCarbs    || 220,
-    fat:      p.goalFat      || 65,
+    calories: p.goalCalories || 2100,
+    protein:  p.goalProtein  || 175,
+    carbs:    p.goalCarbs    || 190,
+    fat:      p.goalFat      || 70,
   };
 }
 
