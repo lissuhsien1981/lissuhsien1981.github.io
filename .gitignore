@@ -1,1 +1,7 @@
 # config.js tracked intentionally — private repo only
+
+# Local noise — never belongs in the repo
+.DS_Store
+.playwright-mcp/
+.wrangler/
+.remember/
