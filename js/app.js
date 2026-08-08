@@ -3,11 +3,15 @@ import {initToday} from './screens/today.js';
 import {initLog, setCurrentExercise} from './screens/log.js';
 import {initStats} from './screens/stats.js';
 import {initProfile} from './screens/profile.js';
+import {storage} from './storage.js';
 
 // One-time profile migration — 2026 減脂期 targets. Overwrites saved nutrition
 // goals so the new numbers land on a device that already has old ones stored;
 // bump the key to push a revised set.
-const CUT_PHASE_KEY = 'fitcoach-migration-cut-2026';
+// v2 rebalances 20g of carbs into fat — a 70g fat ceiling is spent by one
+// Taiwanese lunch box, which made the target unmeetable rather than strict.
+// Calories are unchanged.
+const CUT_PHASE_KEY = 'fitcoach-migration-cut-2026-v2';
 if (!localStorage.getItem(CUT_PHASE_KEY)) {
   let profile = {};
   try { profile = JSON.parse(localStorage.getItem('fitcoach-profile') || '{}'); } catch {}
@@ -17,8 +21,8 @@ if (!localStorage.getItem(CUT_PHASE_KEY)) {
     phase: '減脂期',
     goalCalories: 2100,
     goalProtein: 175,
-    goalCarbs: 190,
-    goalFat: 70,
+    goalCarbs: 170,
+    goalFat: 80,
   });
   localStorage.setItem('fitcoach-profile', JSON.stringify(profile));
   localStorage.setItem(CUT_PHASE_KEY, '1');
@@ -66,3 +70,7 @@ if ('serviceWorker' in navigator) {
 
 // Init
 navigateTo('today');
+
+// The 'online' event only fires on a transition. Reopening the app after it was
+// closed while offline never fires it, so queued sets sat there indefinitely.
+storage.flush().then(n => { if (n) console.log(`同步 ${n} 筆離線記錄`); }).catch(() => {});

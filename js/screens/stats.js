@@ -1,5 +1,6 @@
 // js/screens/stats.js
 import {api} from '../api.js';
+import {todayStr} from '../storage.js';
 
 let activeTab = 'stats';
 let todayFoodEntries = [];
@@ -16,13 +17,13 @@ function getNutritionGoals() {
   return {
     calories: p.goalCalories || 2100,
     protein:  p.goalProtein  || 175,
-    carbs:    p.goalCarbs    || 190,
-    fat:      p.goalFat      || 70,
+    carbs:    p.goalCarbs    || 170,
+    fat:      p.goalFat      || 80,
   };
 }
 
 export function initStats(container) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
 
   container.innerHTML = `
     <div class="header">

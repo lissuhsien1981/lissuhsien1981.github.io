@@ -1,17 +1,25 @@
 // js/api.js
-export async function apiFetch(params) {
+// Apps Script can take 15s+ to answer, and on gym wifi a request sometimes
+// never lands at all. Without a deadline those hang forever, which left the
+// 完成這組 button disabled and the offline queue never engaged.
+const TIMEOUT_MS = 20000;
+// AI calls run a model round-trip, so they get a longer leash.
+const AI_TIMEOUT_MS = 60000;
+
+export async function apiFetch(params, timeout = TIMEOUT_MS) {
   const url = new URL(CONFIG.apiUrl);
   url.searchParams.set('token', CONFIG.token);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), {redirect: 'follow'});
+  const res = await fetch(url.toString(), {redirect: 'follow', signal: AbortSignal.timeout(timeout)});
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
 
-export async function apiPost(body) {
+export async function apiPost(body, timeout = TIMEOUT_MS) {
   const res = await fetch(CONFIG.apiUrl, {
     method: 'POST',
     redirect: 'follow',
+    signal: AbortSignal.timeout(timeout),
     body: JSON.stringify({token: CONFIG.token, ...body})
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -26,7 +34,7 @@ export const api = {
   logBody: (data) => apiPost({action: 'logBody', ...data}),
   logFood: (data) => apiPost({action: 'logFood', ...data}),
   getTodayFood: (date) => apiFetch({action: 'getTodayFood', date}),
-  analyzeFood: (data) => apiPost({action: 'analyzeFood', ...data}),
-  recognizeFood: (data) => apiPost({action: 'recognizeFoodImage', ...data}),
+  analyzeFood: (data) => apiPost({action: 'analyzeFood', ...data}, AI_TIMEOUT_MS),
+  recognizeFood: (data) => apiPost({action: 'recognizeFoodImage', ...data}, AI_TIMEOUT_MS),
   logWatch: (data) => apiPost({action: 'logWatch', ...data})
 };

@@ -2,7 +2,7 @@
 import {RestTimer} from '../components/timer.js';
 import {Numpad} from '../components/numpad.js';
 import {api} from '../api.js';
-import {storage} from '../storage.js';
+import {storage, todayStr} from '../storage.js';
 
 let currentExercise = null;
 let setHistory = [];
@@ -28,10 +28,47 @@ function isBodyweight(ex) {
   return BODYWEIGHT_EXERCISES.some(k => (ex.exercise || '').includes(k));
 }
 
+// ── Session persistence ───────────────────────────────────────────────────
+// setHistory used to live only in module memory, so it died on every reload —
+// and setCurrentExercise wiped it unconditionally, meaning a trip back to the
+// 課表 to check the dots reset the set counter to 1. Keyed per day+exercise so
+// re-entering an exercise resumes where it left off.
+function sessionKey(exercise) { return `fitcoach-log-${todayStr()}-${exercise}`; }
+
+function loadSession(exercise) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(sessionKey(exercise)) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch { return []; }
+}
+
+function saveSession(exercise) {
+  localStorage.setItem(sessionKey(exercise), JSON.stringify(setHistory));
+}
+
+// Rest timer survives navigation and reloads by storing when it ends, not how
+// much is left.
+const REST_KEY = 'fitcoach-rest-deadline';
+function saveRestDeadline(ms) { localStorage.setItem(REST_KEY, String(ms)); }
+function loadRestDeadline() {
+  const ms = parseInt(localStorage.getItem(REST_KEY) || '0');
+  return ms > Date.now() ? ms : 0;
+}
+function clearRestDeadline() { localStorage.removeItem(REST_KEY); }
+
+// Yesterday's keys are dead weight — drop them on the way in.
+function pruneOldSessions() {
+  const prefix = `fitcoach-log-${todayStr()}-`;
+  for (const k of Object.keys(localStorage)) {
+    if (k.startsWith('fitcoach-log-') && !k.startsWith(prefix)) localStorage.removeItem(k);
+  }
+}
+
 export function setCurrentExercise(ex) {
+  pruneOldSessions();
   currentExercise = ex;
-  setHistory = [];
-  setNum = 1;
+  setHistory = loadSession(ex.exercise);
+  setNum = setHistory.length + 1;
   logMode = ex.isCardio ? 'cardio' : 'strength';
 }
 
@@ -107,8 +144,18 @@ function renderLog(container) {
         el.classList.toggle('timer-done', done);
       }
       if (status && done) status.textContent = '✅ 休息結束，準備下一組！';
-    }
+    },
+    () => clearRestDeadline()
   );
+
+  // A rest period started on another screen (or before a reload) is still
+  // running against the wall clock — pick it up rather than showing a reset.
+  const pending = loadRestDeadline();
+  if (pending) {
+    const status = document.getElementById('timer-status');
+    if (status) status.textContent = '組間休息中...';
+    timer.start(0, pending);
+  }
 
   renderInputArea(ex);
 
@@ -161,7 +208,7 @@ function switchMode(mode, container) {
 async function logCurrentSet(container) {
   const ex = currentExercise;
   const cardio = logMode === 'cardio';
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   let record;
 
   if (cardio) {
@@ -182,9 +229,14 @@ async function logCurrentSet(container) {
   }
 
   setHistory.push(record);
+  saveSession(ex.exercise);
 
-  // Notify today screen to sync dots
-  window.dispatchEvent(new CustomEvent('set-logged', {detail: {exercise: ex.exercise, setNum}}));
+  // Notify today screen to sync dots. Sends the total count rather than this
+  // set's number so the dots stay right even when sets were logged out of
+  // order or the counter was restored from a previous visit.
+  window.dispatchEvent(new CustomEvent('set-logged', {
+    detail: {exercise: ex.exercise, setNum, count: setHistory.length}
+  }));
 
   setNum++;
   const headerSub = document.getElementById('log-header-sub');
@@ -197,7 +249,9 @@ async function logCurrentSet(container) {
   const statusEl = document.getElementById('timer-status');
   if (timerEl) timerEl.classList.remove('timer-done');
   if (statusEl) statusEl.textContent = '組間休息中...';
-  timer.start(selectedRestSecs);
+  const deadline = Date.now() + selectedRestSecs * 1000;
+  saveRestDeadline(deadline);
+  timer.start(selectedRestSecs, deadline);
   if ('vibrate' in navigator) navigator.vibrate(50);
 
   const btn = document.getElementById('log-btn');

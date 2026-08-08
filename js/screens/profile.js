@@ -1,8 +1,9 @@
 // js/screens/profile.js
 import {api} from '../api.js';
+import {todayStr} from '../storage.js';
 
 function showWatchModal(profile, container) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const WORKOUT_TYPES = ['跑步', '重訓', '有氧', '游泳', '騎車', '健走', '其他'];
 
   const overlay = document.createElement('div');
@@ -168,7 +169,7 @@ function renderProfile(container) {
   document.getElementById('save-weight-btn').addEventListener('click', async () => {
     const w = parseFloat(document.getElementById('weight-input').value);
     if (!w) { alert('請輸入體重'); return; }
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayStr();
 
     // Always save locally first
     profile.lastWeight = w;
@@ -234,11 +235,11 @@ function showEditModal(profile, container) {
         <div class="modal-row">
           <div>
             <label class="modal-label">碳水 g</label>
-            <input class="modal-input" id="p-carbs" type="number" min="0" placeholder="190" value="${profile.goalCarbs || ''}">
+            <input class="modal-input" id="p-carbs" type="number" min="0" placeholder="170" value="${profile.goalCarbs || ''}">
           </div>
           <div>
             <label class="modal-label">脂肪 g</label>
-            <input class="modal-input" id="p-fat" type="number" min="0" placeholder="70" value="${profile.goalFat || ''}">
+            <input class="modal-input" id="p-fat" type="number" min="0" placeholder="80" value="${profile.goalFat || ''}">
           </div>
         </div>
       </div>

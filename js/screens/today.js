@@ -1,5 +1,6 @@
 // js/screens/today.js
 import {api} from '../api.js';
+import {todayStr} from '../storage.js';
 
 // Workout sessions — picked freely, not tied to calendar weekday
 const REST_SESSION = {day: '休息', label: '休息日', short: '休息'};
@@ -59,13 +60,13 @@ function isTimedEx(ex) {
 
 // ── Dot-state persistence ─────────────────────────────────────────────────
 function dotKey(day, exercise) {
-  return `fitcoach-sets-${new Date().toISOString().split('T')[0]}-${day}-${exercise}`;
+  return `fitcoach-sets-${todayStr()}-${day}-${exercise}`;
 }
 function getDotState(day, exercise) { return parseInt(localStorage.getItem(dotKey(day, exercise)) || '0'); }
 function saveDotState(day, exercise, count) { localStorage.setItem(dotKey(day, exercise), count); }
 
 // ── Completion state ──────────────────────────────────────────────────────
-function completeKey(day) { return `fitcoach-complete-${new Date().toISOString().split('T')[0]}-${day}`; }
+function completeKey(day) { return `fitcoach-complete-${todayStr()}-${day}`; }
 function isDayComplete(day) { return localStorage.getItem(completeKey(day)) === '1'; }
 function markDayComplete(day) { localStorage.setItem(completeKey(day), '1'); }
 
@@ -100,17 +101,16 @@ export function initToday(container) {
 
   // Sync log-screen set completions → dot state
   window.addEventListener('set-logged', (e) => {
-    const {exercise, setNum} = e.detail;
+    const {exercise, count} = e.detail;
     const card = container.querySelector(`.exercise-card[data-exercise="${CSS.escape(exercise)}"]`);
     if (!card) return;
     const dots = card.querySelectorAll('.set-dot:not([data-action])');
-    const dot = dots[setNum - 1];
-    if (dot && !dot.classList.contains('done')) {
-      dot.classList.add('done');
-      const count = [...dots].filter(d => d.classList.contains('done')).length;
-      saveDotState(selectedSession.day, exercise, count);
-      checkAllDone(card);
-    }
+    // Fill the first `count` dots. Indexing by setNum meant that once the set
+    // counter restarted the event pointed at an already-lit dot, the guard
+    // rejected it, and later sets silently stopped registering.
+    dots.forEach((d, i) => { if (i < count) d.classList.add('done'); });
+    saveDotState(selectedSession.day, exercise, [...dots].filter(d => d.classList.contains('done')).length);
+    checkAllDone(card);
   });
 
   function renderDaySwitcher() {
