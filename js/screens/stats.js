@@ -338,19 +338,62 @@ function bindFoodForm(today) {
 
 // ── Stats Tab ─────────────────────────────────────────────────────────────
 
+const DAY_MS = 86400000;
+
+// Body Metrics dates arrive as String() of a Sheets Date cell — normally a full
+// "Sun May 17 2026 00:00:00 GMT+0800 (…)" string, which is what used to get
+// printed raw under the chart. getHistory formats its dates server-side;
+// getStats doesn't, so both shapes are handled here rather than in Code.gs,
+// which would need a manual redeploy.
+function parseMetricDate(v) {
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) {
+    const [y, m, d] = v.slice(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function fmtMD(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
+function daysBetween(a, b) { return Math.round((b.getTime() - a.getTime()) / DAY_MS); }
+
+function toWeightPoints(metrics) {
+  return metrics
+    .map(m => ({date: parseMetricDate(m.date), weight: Number(m.weight)}))
+    .filter(p => p.date && p.weight)
+    .sort((a, b) => a.date - b.date);
+}
+
+// The old delta compared the first of the last 30 *rows* to the latest one and
+// labelled it 本月. With weigh-ins this sparse that meant a 3-month change was
+// being reported as a monthly one. Measure a real 30-day window instead, and
+// when nothing else was logged inside it, name the date being compared against.
+function weightSummary(points) {
+  if (points.length < 2) return null;
+  const latest = points[points.length - 1];
+  const windowStart = latest.date.getTime() - 30 * DAY_MS;
+  const inWindow = points.filter(p => p.date.getTime() >= windowStart);
+  const monthly = inWindow.length >= 2;
+  const base = monthly ? inWindow[0] : points[points.length - 2];
+  return {
+    delta: latest.weight - base.weight,
+    label: monthly ? '近 30 天' : `自 ${fmtMD(base.date)}`
+  };
+}
+
 function renderStats(data) {
-  const metrics = data.bodyMetrics || [];
-  const latest = metrics.length ? metrics[metrics.length - 1] : null;
-  const first = metrics.length > 1 ? metrics[0] : null;
+  const points = toWeightPoints(data.bodyMetrics || []);
+  const latest = points.length ? points[points.length - 1] : null;
   const latestWeight = latest ? latest.weight : '--';
-  const weightDelta = (first && latest) ? (latest.weight - first.weight).toFixed(1) : null;
+  const summary = weightSummary(points);
+  const arrow = summary ? (summary.delta > 0 ? '↑' : summary.delta < 0 ? '↓' : '→') : '';
 
   document.getElementById('stats-content').innerHTML = `
     <div class="stats-grid">
       <div class="stat-card accent">
         <div class="stat-label">體重</div>
         <div class="stat-value accent">${latestWeight}<span class="stat-unit">kg</span></div>
-        ${weightDelta !== null ? `<div class="stat-delta">${parseFloat(weightDelta) > 0 ? '↑' : '↓'} ${Math.abs(weightDelta)} kg 本月</div>` : ''}
+        ${summary ? `<div class="stat-delta">${arrow} ${Math.abs(summary.delta).toFixed(1)} kg ${summary.label}</div>` : ''}
       </div>
       <div class="stat-card">
         <div class="stat-label">本週訓練</div>
@@ -366,38 +409,64 @@ function renderStats(data) {
         <div class="stat-value">${data.avgHR || '--'}<span class="stat-unit">bpm</span></div>
       </div>
     </div>
-    ${renderWeightChart(metrics)}
+    ${renderWeightChart(points)}
   `;
 }
 
-function renderWeightChart(metrics) {
-  if (metrics.length < 2) return '';
-  const weights = metrics.map(m => m.weight);
+// A 7-day moving average only says anything when weigh-ins are roughly daily.
+// Below this density it just retraces the raw line while implying a precision
+// the data doesn't have, so it stays hidden and the card asks for daily entries.
+const TREND_WINDOW_DAYS = 7;
+const TREND_MIN_POINTS = 5;
+const TREND_DENSITY_DAYS = 14;
+
+function movingAverage(points) {
+  return points.map(p => {
+    const from = p.date.getTime() - TREND_WINDOW_DAYS * DAY_MS;
+    const win = points.filter(q => q.date.getTime() > from && q.date <= p.date);
+    return {date: p.date, weight: win.reduce((s, q) => s + q.weight, 0) / win.length};
+  });
+}
+
+function renderWeightChart(points) {
+  if (points.length < 2) return '';
+  const last = points[points.length - 1];
+  const first = points[0];
+  const weights = points.map(p => p.weight);
   const min = Math.min(...weights) - 1;
   const max = Math.max(...weights) + 1;
   const range = max - min || 1;
-  const last = metrics[metrics.length - 1];
 
-  const points = metrics.map((m, i) => {
-    const x = (i / (metrics.length - 1)) * 280 + 10;
-    const y = 70 - ((m.weight - min) / range) * 60;
-    return `${x},${y}`;
-  }).join(' ');
+  // X by elapsed days, not row index. Index spacing drew a 77-day gap the same
+  // width as two consecutive days, which hid exactly the stretch where the
+  // tracking stopped.
+  const span = daysBetween(first.date, last.date) || 1;
+  const xOf = p => 10 + (daysBetween(first.date, p.date) / span) * 280;
+  const yOf = w => 70 - ((w - min) / range) * 60;
+  const path = pts => pts.map(p => `${xOf(p).toFixed(1)},${yOf(p.weight).toFixed(1)}`).join(' ');
 
-  const lastX = (((metrics.length - 1) / (metrics.length - 1)) * 280 + 10);
-  const lastY = 70 - ((last.weight - min) / range) * 60;
+  const recent = points.filter(p => daysBetween(p.date, last.date) <= TREND_DENSITY_DAYS);
+  const showTrend = recent.length >= TREND_MIN_POINTS;
 
   return `
     <div class="chart-card">
-      <div class="chart-title">體重趨勢（近30天）</div>
+      <div class="chart-title">體重趨勢（${fmtMD(first.date)} – ${fmtMD(last.date)}，${points.length} 筆）</div>
       <svg viewBox="0 0 300 80" style="width:100%;height:80px;overflow:visible">
-        <polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
-        <circle cx="${lastX}" cy="${lastY}" r="4" fill="var(--accent)"/>
+        <polyline points="${path(points)}" fill="none" stroke="var(--accent)" stroke-width="2"
+          stroke-linejoin="round" opacity="${showTrend ? '0.35' : '1'}"/>
+        ${showTrend ? `<polyline points="${path(movingAverage(points))}" fill="none"
+          stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>` : ''}
+        ${points.map(p => `<circle cx="${xOf(p).toFixed(1)}" cy="${yOf(p.weight).toFixed(1)}" r="2.5"
+          fill="var(--accent)" opacity="0.5"/>`).join('')}
+        <circle cx="${xOf(last).toFixed(1)}" cy="${yOf(last.weight).toFixed(1)}" r="4" fill="var(--accent)"/>
       </svg>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)">
-        <span>${metrics[0].date}</span>
-        <span style="color:var(--accent);font-weight:700">今日 ${last.weight} kg</span>
+        <span>${fmtMD(first.date)}</span>
+        <span style="color:var(--accent);font-weight:700">${fmtMD(last.date)} ${last.weight} kg</span>
       </div>
+      ${showTrend
+        ? '<div style="font-size:11px;color:var(--text3);margin-top:6px">粗線為 7 日均線</div>'
+        : '<div style="font-size:11px;color:var(--text3);margin-top:6px">每日量體重才會出現 7 日均線</div>'}
     </div>
   `;
 }
