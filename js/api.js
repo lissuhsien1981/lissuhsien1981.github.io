@@ -34,6 +34,7 @@ export const api = {
   logBody: (data) => apiPost({action: 'logBody', ...data}),
   logFood: (data) => apiPost({action: 'logFood', ...data}),
   getTodayFood: (date) => apiFetch({action: 'getTodayFood', date}),
+  getExerciseLog: (exercise = '', limit = 3) => apiFetch({action: 'getExerciseLog', exercise, limit}),
   analyzeFood: (data) => apiPost({action: 'analyzeFood', ...data}, AI_TIMEOUT_MS),
   recognizeFood: (data) => apiPost({action: 'recognizeFoodImage', ...data}, AI_TIMEOUT_MS),
   logWatch: (data) => apiPost({action: 'logWatch', ...data})

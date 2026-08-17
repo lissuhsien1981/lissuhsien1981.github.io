@@ -188,6 +188,7 @@ function doGet(e) {
   if (action === 'getStats') return getStats(ss);
   if (action === 'getHistory') return getHistory(ss);
   if (action === 'getTodayFood') return getTodayFood(ss, e.parameter.date);
+  if (action === 'getExerciseLog') return getExerciseLog(ss, e.parameter.exercise, e.parameter.limit);
   return json({error: 'Unknown action'});
 }
 
@@ -391,6 +392,56 @@ function getHistory(ss) {
     if (!byDate[d].exercises.includes(r[2])) byDate[d].exercises.push(r[2]);
   });
   return json(Object.values(byDate).reverse().slice(0, 20));
+}
+
+// Every set ever logged sits in Workout Log, but nothing read it back — getHistory
+// returns exercise names only, so neither the app nor a coaching review could see
+// the load. Deciding to add weight or hold is exactly a question about load, which
+// made it unanswerable from the outside.
+//
+// With `exercise` set, returns that movement's recent sessions (what the log screen
+// needs to show last time's numbers). Without it, returns the same slice for every
+// movement, which is small enough to review a whole block at once.
+function getExerciseLog(ss, exercise, limit) {
+  const tz = Session.getScriptTimeZone();
+  const rows = ss.getSheetByName('Workout Log').getDataRange().getValues().slice(1);
+  const wanted = String(exercise || '').trim();
+  const perExercise = Number(limit) > 0 ? Number(limit) : 3;
+
+  const sessions = {};
+  rows.forEach(r => {
+    const name = String(r[2] || '').trim();
+    if (!name) return;
+    if (wanted && name !== wanted) return;
+    const date = r[0] instanceof Date
+      ? Utilities.formatDate(r[0], tz, 'yyyy-MM-dd')
+      : String(r[0]).slice(0, 10);
+    const key = date + '|' + name;
+    if (!sessions[key]) sessions[key] = {date: date, exercise: name, dayType: r[1], sets: []};
+    sessions[key].sets.push({
+      setNum: Number(r[3]) || 0,
+      weight: Number(r[4]) || 0,
+      reps: Number(r[5]) || 0,
+      extraSet: r[6] === true || String(r[6]).toUpperCase() === 'TRUE',
+      notes: String(r[7] || '')
+    });
+  });
+
+  // Newest first, then keep only the most recent `perExercise` sessions of each
+  // movement — an untrimmed log would grow past what a phone on gym wifi should
+  // be pulling to answer "what did I lift last time".
+  const all = Object.values(sessions)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const kept = [];
+  const seen = {};
+  all.forEach(s => {
+    seen[s.exercise] = (seen[s.exercise] || 0) + 1;
+    if (seen[s.exercise] <= perExercise) {
+      s.sets.sort((a, b) => a.setNum - b.setNum);
+      kept.push(s);
+    }
+  });
+  return json(kept);
 }
 
 function json(data) {

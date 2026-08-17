@@ -6,6 +6,7 @@ import {storage, todayStr} from '../storage.js';
 
 let currentExercise = null;
 let setHistory = [];
+let lastSession = null;
 let setNum = 1;
 let timer = null;
 let numpad = null;
@@ -64,10 +65,29 @@ function pruneOldSessions() {
   }
 }
 
+// ── Last session ──────────────────────────────────────────────────────────
+// What was lifted last time is the whole basis for deciding to add weight or
+// hold, and it only ever existed in the sheet. Cached per exercise so it still
+// shows on gym wifi, where the fetch is the thing most likely to fail.
+function lastKey(exercise) { return `fitcoach-last-${exercise}`; }
+
+function loadLast(exercise) {
+  try { return JSON.parse(localStorage.getItem(lastKey(exercise)) || 'null'); } catch { return null; }
+}
+function saveLast(exercise, session) {
+  if (session) localStorage.setItem(lastKey(exercise), JSON.stringify(session));
+}
+
+function bestSet(session) {
+  if (!session || !Array.isArray(session.sets) || !session.sets.length) return null;
+  return session.sets.reduce((a, b) => (b.weight > a.weight ? b : a));
+}
+
 export function setCurrentExercise(ex) {
   pruneOldSessions();
   currentExercise = ex;
   setHistory = loadSession(ex.exercise);
+  lastSession = loadLast(ex.exercise);
   setNum = setHistory.length + 1;
   logMode = ex.isCardio ? 'cardio' : 'strength';
 }
@@ -108,6 +128,7 @@ function renderLog(container) {
       <button class="mode-btn${logMode === 'strength' ? ' active' : ''}" data-mode="strength">重訓</button>
       <button class="mode-btn${logMode === 'cardio' ? ' active' : ''}" data-mode="cardio">有氧</button>
     </div>
+    <div id="last-session"></div>
     <div id="input-area"></div>
     <button class="btn-primary" id="log-btn">${logMode === 'cardio' ? '完成有氧訓練 ✓' : '完成這組 ✓'}</button>
     <div class="card" id="history-area">
@@ -157,12 +178,63 @@ function renderLog(container) {
     timer.start(0, pending);
   }
 
+  renderLastSession();
   renderInputArea(ex);
+  refreshLastSession(ex);
 
   document.getElementById('log-btn').addEventListener('click', () => logCurrentSet(container));
 
   // Restore any sets already logged this session (e.g. after tab switch)
   renderHistory();
+}
+
+function renderLastSession() {
+  const el = document.getElementById('last-session');
+  if (!el) return;
+  const s = lastSession;
+  if (!s || !Array.isArray(s.sets) || !s.sets.length) { el.innerHTML = ''; return; }
+
+  const top = bestSet(s);
+  const sets = s.sets.map(x => {
+    if (x.notes === '有氧') return `${x.weight} 分鐘`;
+    if (x.notes === '計時') return `${x.reps} 秒`;
+    const w = x.weight ? `${x.weight}kg` : '自體重';
+    const heaviest = top && x.weight === top.weight && x.weight > 0;
+    return `<span style="${heaviest ? 'color:var(--accent);font-weight:700' : ''}">${w} × ${x.reps}</span>`;
+  }).join('<span style="color:var(--text3)">　·　</span>');
+
+  el.innerHTML = `
+    <div class="card" style="padding:12px 16px;margin-bottom:8px">
+      <div class="section-label" style="padding:0 0 6px">上次 ${s.date}${s.dayType ? ` · ${s.dayType}` : ''}</div>
+      <div style="font-size:15px;font-variant-numeric:tabular-nums">${sets}</div>
+    </div>
+  `;
+}
+
+async function refreshLastSession(ex) {
+  try {
+    const sessions = await api.getExerciseLog(ex.exercise, 3);
+    const today = todayStr();
+    // Today's own sets are already on screen under 本日記錄 — the number worth
+    // beating is the last session before today.
+    const prev = (Array.isArray(sessions) ? sessions : []).find(s => s.date !== today);
+    if (prev) { lastSession = prev; saveLast(ex.exercise, prev); }
+  } catch { /* keep whatever was cached */ }
+
+  if (currentExercise !== ex) return;  // navigated elsewhere while in flight
+  renderLastSession();
+  prefillFromLast();
+}
+
+// The plan's WeightTarget column is 0 on every row, so the numpad always opened
+// at zero and last session's load had to be remembered by hand. Only fills a
+// field still sitting at its default — never overwrites something already typed.
+function prefillFromLast() {
+  if (!numpad || logMode === 'cardio' || numpad.mode === 'timed') return;
+  if (numpad.weightVal !== '0') return;
+  const top = bestSet(lastSession);
+  if (!top || !top.weight) return;
+  numpad.setDefaults(top.weight, numpad.values.reps || currentExercise.reps || top.reps);
 }
 
 function renderInputArea(ex) {
@@ -189,7 +261,9 @@ function renderInputArea(ex) {
   } else {
     const mode = isTimed(ex) ? 'timed' : (isBodyweight(ex) ? 'bodyweight' : 'standard');
     numpad = new Numpad(area, {onWeightChange: () => {}, onRepsChange: () => {}}, mode);
-    if (ex.weightTarget || ex.reps) numpad.setDefaults(ex.weightTarget || 0, ex.reps);
+    const top = bestSet(lastSession);
+    const weight = ex.weightTarget || (top ? top.weight : 0);
+    if (weight || ex.reps) numpad.setDefaults(weight, ex.reps);
   }
 }
 
