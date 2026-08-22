@@ -180,6 +180,47 @@ function populatePlanWeek3_PPL() {
   Logger.log('✅ Week 3 PPL plan appended: ' + rows.length + ' exercises across 6 days');
 }
 
+// ─── RUN ONCE TO ADD THE UPPER-BODY ROTATION ────────────────────────────────
+// Appends (never clears) so the PPL rows stay put and switching back is just a
+// mode change. Exercise names deliberately match the PPL rows for the same
+// movement — getExerciseLog keys on the name, so the log screen carries the
+// existing load history straight into this mode instead of restarting at zero.
+// Only Chest-Supported Row is new; it replaces Barbell Row, whose bent-over
+// standing position is exactly the loading the physio pulled.
+function populatePlanUpperOnly() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const plan = ss.getSheetByName('Training Plan');
+
+  const rows = [
+    // 上肢-推（胸＋三頭）
+    [4,'上肢-推','Bench Press 臥推',3,8,0,'中等重量不追極限，離心3秒'],
+    [4,'上肢-推','Incline DB Press 上斜啞鈴推',3,8,0,'每手，肩胛穩定，避免底部過度伸展'],
+    [4,'上肢-推','Low-to-High Cable Crossover 繩索下對上夾胸',3,10,0,''],
+    [4,'上肢-推','Dips 撐體',3,10,0,'Hammer 機械式，重量為下推槓片重'],
+    [4,'上肢-推','Overhead Tricep Extension 過頭三頭伸展',3,10,0,'注意肩部活動角度'],
+    [4,'上肢-推','Cable Tricep Pushdown 三頭下壓',3,12,0,''],
+
+    // 上肢-拉（背＋二頭）
+    [4,'上肢-拉','Lat Pulldown 高拉',3,10,0,'垂直路徑，肩部友善'],
+    [4,'上肢-拉','Seated Cable Row 坐姿划船',3,10,0,''],
+    [4,'上肢-拉','Chest-Supported Row 胸靠式划船',3,10,0,'取代槓鈴划船，軀幹有支撐不吃脊椎負荷'],
+    [4,'上肢-拉','Cable Pullover 繩索背闊拉',3,12,0,'控制行程，不甩動'],
+    [4,'上肢-拉','Hammer Curl 錘式彎舉',3,10,0,'每手'],
+    [4,'上肢-拉','Incline DB Curl 上斜啞鈴彎舉',3,10,0,'每手'],
+
+    // 上肢-肩
+    [4,'上肢-肩','DB Overhead Press 啞鈴肩推',3,8,0,'坐姿有靠背，不做站姿版本'],
+    [4,'上肢-肩','Cable Lateral Raise 繩索側平舉',3,12,0,'每邊，控制離心；換機台追動作品質不追數字'],
+    [4,'上肢-肩','DB Lateral Raise 21s 啞鈴側平舉21式',2,21,0,'下半程7+上半程7+全程7，輕重量'],
+    [4,'上肢-肩','Rope Face Pull 繩索臉拉',3,15,0,'肘高於肩，肩關節穩定訓練'],
+    [4,'上肢-肩','DB Rear Delt Fly 啞鈴反向飛鳥',3,12,0,''],
+    [4,'上肢-肩','Incline DB Shrug 上斜啞鈴聳肩',3,10,0,'上斜俯臥，非站姿負重'],
+  ];
+
+  plan.getRange(plan.getLastRow() + 1, 1, rows.length, 7).setValues(rows);
+  Logger.log('✅ Upper-body rotation appended: ' + rows.length + ' exercises across 3 days');
+}
+
 function doGet(e) {
   if (e.parameter.token !== SECRET) return json({error: 'Unauthorized'});
   const ss = SpreadsheetApp.openById(SHEET_ID);

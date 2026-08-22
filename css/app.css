@@ -99,6 +99,10 @@ body {
   border-radius: 12px; color: var(--text2);
   font-size: 14px; font-weight: 700; cursor: pointer;
 }
+/* Four modes share this row — at 390px each button gets ~81px, which the
+   default 14px/10px padding overflows. Scoped so the log screen's 重訓/有氧
+   toggle, which reuses .mode-btn with only two buttons, keeps its own size. */
+.mode-switcher .mode-btn { padding: 10px 6px; font-size: 13px; white-space: nowrap; }
 .mode-btn.active {
   background: var(--accent); border-color: var(--accent); color: #0f0f0f;
 }
