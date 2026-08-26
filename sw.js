@@ -1,5 +1,5 @@
 // sw.js
-const CACHE = 'fitcoach-v38';
+const CACHE = 'fitcoach-v39';
 const STATIC = [
   '/css/app.css', '/manifest.json', '/config.js',
   '/js/app.js', '/js/api.js', '/js/storage.js',
@@ -21,6 +21,10 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.url.includes('script.google.com')) {
+    // Only reads get an offline stand-in. A POST that fails is a write that did
+    // not happen, and answering it with [] made logFood report success — the
+    // meal went into the local cache and never reached the sheet.
+    if (e.request.method !== 'GET') return;
     e.respondWith(fetch(e.request).catch(() =>
       new Response('[]', {headers: {'Content-Type': 'application/json'}})
     ));

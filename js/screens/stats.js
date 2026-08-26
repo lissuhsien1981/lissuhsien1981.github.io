@@ -214,18 +214,24 @@ function renderFoodSection(today) {
     </div>
   `;
 
-  document.getElementById('add-food-btn').addEventListener('click', () => {
-    const form = document.getElementById('food-form-area');
+  // Every render replaces these nodes, so the form is wired exactly once, here.
+  // Binding on each open instead stacked another full set of listeners on the
+  // same nodes every time the form was reopened, and nothing removed the old
+  // ones. After a handful of entries one tap on 拍照 / AI 分析 fired ten
+  // parallel Gemini calls and ten blocking alert()s, which froze the page.
+  const addBtn = document.getElementById('add-food-btn');
+  const form = document.getElementById('food-form-area');
+  bindFoodForm(today);
+  addBtn.addEventListener('click', () => {
     const isOpen = form.style.display !== 'none';
     form.style.display = isOpen ? 'none' : 'block';
-    document.getElementById('add-food-btn').textContent = isOpen ? '＋ 新增飲食' : '✕ 取消';
-    if (!isOpen) bindFoodForm(today);
+    addBtn.textContent = isOpen ? '＋ 新增飲食' : '✕ 取消';
   });
 }
 
 
 function compressImage(file, maxPx = 1024) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -236,6 +242,12 @@ function compressImage(file, maxPx = 1024) {
       canvas.height = Math.round(img.height * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
+    };
+    // Without this the promise stayed pending forever on a photo the browser
+    // can't decode, leaving 拍照 disabled with no way back.
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('無法讀取這張照片，請改從相簿選一張'));
     };
     img.src = url;
   });
@@ -303,6 +315,9 @@ function bindFoodForm(today) {
       document.getElementById('food-cal').focus();
     }
     btn.disabled = false;
+    // Picking the same photo again fires no change event unless the input is
+    // cleared, so a failed attempt could not be retried with that photo.
+    e.target.value = '';
   });
 
   document.getElementById('submit-food-btn').addEventListener('click', async () => {
