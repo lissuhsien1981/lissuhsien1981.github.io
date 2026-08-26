@@ -1,6 +1,7 @@
 // js/screens/stats.js
 import {api} from '../api.js';
 import {todayStr} from '../storage.js';
+import {record} from '../diag.js';
 
 let activeTab = 'stats';
 let todayFoodEntries = [];
@@ -89,6 +90,7 @@ function loadFoodSection(today) {
 
 function renderFoodSection(today) {
   const section = document.getElementById('food-section');
+  record('food', `render ${todayFoodEntries.length} entries, section=${!!section}`);
   if (!section) return;
 
   const totals = todayFoodEntries.reduce((acc, e) => ({
@@ -226,6 +228,7 @@ function renderFoodSection(today) {
     const isOpen = form.style.display !== 'none';
     form.style.display = isOpen ? 'none' : 'block';
     addBtn.textContent = isOpen ? '＋ 新增飲食' : '✕ 取消';
+    record('food', `toggle form -> ${isOpen ? 'closed' : 'open'}`);
   });
 }
 
@@ -324,6 +327,7 @@ function bindFoodForm(today) {
     const desc = document.getElementById('food-desc').value.trim();
     if (!desc) { alert('請輸入食物描述'); return; }
     const btn = document.getElementById('submit-food-btn');
+    record('food', 'submit handler entered');
     btn.disabled = true;
     btn.textContent = '送出中...';
 
@@ -340,6 +344,7 @@ function bindFoodForm(today) {
 
     try {
       await api.logFood(data);
+      record('food', 'logFood returned ok');
       todayFoodEntries.push(data);
       saveFoodCache(today, todayFoodEntries);
       renderFoodSection(today);

@@ -3,10 +3,10 @@
 // localStorage, so a freeze can be read back after the app is restarted.
 // Imported first in app.js so the handlers are up before anything else runs.
 
-export const BUILD = '2026-08-26.1';
+export const BUILD = '2026-08-26.2';
 
 const LOG_KEY = 'fitcoach-diag-log';
-const MAX_ENTRIES = 25;
+const MAX_ENTRIES = 60;   // taps fill this quickly; keep enough to span a freeze
 
 function read() {
   try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch { return []; }
@@ -32,6 +32,71 @@ window.addEventListener('unhandledrejection', e => {
   const r = e.reason;
   record('reject', r && r.message ? `${r.name}: ${r.message}` : r);
 });
+
+function describe(el) {
+  if (!el) return 'null';
+  const id = el.id ? '#' + el.id : '';
+  const cls = typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).join('.') : '';
+  return (el.tagName || '?').toLowerCase() + id + cls;
+}
+
+// A tap that never reaches its button leaves no error behind, so record where
+// every tap actually lands and what sits on top of that point. If something is
+// covering the screen this is the only place it shows up.
+addEventListener('pointerdown', e => {
+  const top = document.elementFromPoint(e.clientX, e.clientY);
+  const hitsTarget = top === e.target || (top && e.target && top.contains(e.target));
+  record('tap', `${Math.round(e.clientX)},${Math.round(e.clientY)} on ${describe(e.target)}` +
+    (hitsTarget ? '' : ` BLOCKED-BY ${describe(top)}`));
+}, true);
+
+// Scroll ability at the moment of a touch: "won't scroll" is otherwise
+// indistinguishable from "already at the bottom".
+addEventListener('touchstart', () => {
+  const s = document.querySelector('.screen.active');
+  if (s) record('touch', `${describe(s)} scrollTop ${s.scrollTop}/${s.scrollHeight - s.clientHeight}`);
+}, true);
+
+// In-flight requests. A promise that never settles produces no error either.
+const inflight = new Map();
+let seq = 0;
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (input, init) => {
+  const id = ++seq;
+  let action = 'unknown';
+  try {
+    action = (init && init.method === 'POST')
+      ? JSON.parse(init.body).action
+      : new URL(String(input)).searchParams.get('action') || String(input).split('/').pop();
+  } catch {}
+  inflight.set(id, {action, start: Date.now()});
+  const t0 = Date.now();
+  try {
+    const res = await nativeFetch(input, init);
+    inflight.delete(id);
+    if (!res.ok) record('http', `${action} -> ${res.status} in ${Date.now() - t0}ms`);
+    return res;
+  } catch (err) {
+    inflight.delete(id);
+    record('netfail', `${action} ${err.name}: ${err.message} after ${Date.now() - t0}ms`);
+    throw err;
+  }
+};
+
+export function inflightReport() {
+  if (!inflight.size) return 'none';
+  const now = Date.now();
+  return [...inflight.values()].map(r => `${r.action} pending ${Math.round((now - r.start) / 1000)}s`).join(', ');
+}
+
+// Main-thread stalls. If the timer is late by seconds, the UI was blocked.
+let lastTick = Date.now();
+setInterval(() => {
+  const now = Date.now();
+  const late = now - lastTick - 1000;
+  if (late > 2500) record('stall', `main thread blocked ~${Math.round(late / 1000)}s`);
+  lastTick = now;
+}, 1000);
 
 function bytes(n) { return n < 1024 ? n + ' B' : (n / 1024).toFixed(1) + ' KB'; }
 
@@ -73,9 +138,20 @@ export async function snapshot() {
     lines.push(`sync queue: ${q.length} pending`);
   } catch (e) { lines.push(`sync queue: CORRUPT (${e.message})`); }
 
+  lines.push(`in-flight requests: ${inflightReport()}`);
+
+  // Anything covering the screen that shouldn't be there.
+  const overlays = [...document.querySelectorAll('body *')].filter(el => {
+    const s = getComputedStyle(el);
+    if (s.position !== 'fixed' && s.position !== 'absolute') return false;
+    const r = el.getBoundingClientRect();
+    return r.width > innerWidth * 0.8 && r.height > innerHeight * 0.5 && s.display !== 'none';
+  }).map(describe);
+  lines.push(`full-screen layers: ${overlays.join(', ') || 'none'}`);
+
   const log = read();
-  lines.push(`--- captured errors: ${log.length} ---`);
-  log.slice(-12).forEach(e => lines.push(`${e.t.slice(5, 19)} [${e.kind}] ${e.detail}`));
+  lines.push(`--- events: ${log.length} ---`);
+  log.slice(-16).forEach(e => lines.push(`${e.t.slice(11, 19)} [${e.kind}] ${e.detail}`));
 
   return lines.join('\n');
 }
