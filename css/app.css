@@ -27,21 +27,30 @@ body {
 
 #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
+/* Block layout, not flex. As a flex column the children were shrunk to fit and
+   their overflow stopped counting towards scrollHeight on iOS — the container
+   reported 793 vs 793 while the list was visibly cut off at the nav bar, so
+   there was nothing to scroll and everything below the fold was unreachable.
+   Desktop WebKit does not reproduce it; the phone does. Block children stack
+   and overflow the scroll container normally. */
 .screen {
   display: none;
-  flex-direction: column;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: calc(80px + var(--safe-bottom));
 }
-.screen.active { display: flex; }
+.screen.active { display: block; }
 .screen::-webkit-scrollbar { display: none; }
 
+/* Today keeps the flex split: a fixed header with its own scrolling body. */
 #screen-today {
+  flex-direction: column;
   overflow-y: hidden;
   padding-bottom: 0;
 }
+#screen-today.active { display: flex; }
 .today-fixed-top {
   flex-shrink: 0;
   background: var(--bg);

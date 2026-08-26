@@ -3,7 +3,7 @@
 // localStorage, so a freeze can be read back after the app is restarted.
 // Imported first in app.js so the handlers are up before anything else runs.
 
-export const BUILD = '2026-08-26.3';
+export const BUILD = '2026-08-26.4';
 
 const LOG_KEY = 'fitcoach-diag-log';
 const MAX_ENTRIES = 60;   // taps fill this quickly; keep enough to span a freeze

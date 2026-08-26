@@ -106,7 +106,9 @@ function renderFoodSection(today) {
 
   function pct(val, goal) { return Math.min(100, Math.round((val / goal) * 100)); }
   function remainStr(val, goal, unit) {
-    const rem = goal - val;
+    // Subtracting the logged macros lands on 27.900000000000006 often enough
+    // that the raw difference can't be printed.
+    const rem = Math.round((goal - val) * 10) / 10;
     return rem >= 0
       ? `<span class="food-goal-ok">剩餘 ${rem}${unit}</span>`
       : `<span class="food-goal-over">超出 ${Math.abs(rem)}${unit}</span>`;
