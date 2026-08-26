@@ -1,6 +1,7 @@
 // js/screens/profile.js
 import {api} from '../api.js';
 import {todayStr} from '../storage.js';
+import {snapshot, clearLog} from '../diag.js';
 
 function showWatchModal(profile, container) {
   const today = todayStr();
@@ -164,6 +165,12 @@ function renderProfile(container) {
     </div>
 
     <button class="btn-complete" id="watch-import-btn" style="margin-top:4px">⌚ 輸入 Apple Watch 資料</button>
+
+    <div class="section-label" style="margin-top:16px">診斷</div>
+    <div class="card">
+      <pre id="diag-out" style="white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5;color:var(--text2);font-family:ui-monospace,Menlo,monospace;margin:0">讀取中...</pre>
+      <button class="btn-complete" id="diag-clear-btn" style="margin-top:10px">清除錯誤記錄</button>
+    </div>
   `;
 
   document.getElementById('save-weight-btn').addEventListener('click', async () => {
@@ -185,6 +192,18 @@ function renderProfile(container) {
 
   document.getElementById('edit-all-btn').addEventListener('click', () => showEditModal(profile, container));
   document.getElementById('watch-import-btn').addEventListener('click', () => showWatchModal(profile, container));
+
+  snapshot().then(text => {
+    const el = document.getElementById('diag-out');
+    if (el) el.textContent = text;
+  });
+  document.getElementById('diag-clear-btn').addEventListener('click', () => {
+    clearLog();
+    snapshot().then(text => {
+      const el = document.getElementById('diag-out');
+      if (el) el.textContent = text;
+    });
+  });
 
   api.getStats().then(() => {
     const el = document.getElementById('sheets-status');

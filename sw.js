@@ -1,8 +1,8 @@
 // sw.js
-const CACHE = 'fitcoach-v39';
+const CACHE = 'fitcoach-v40';
 const STATIC = [
   '/css/app.css', '/manifest.json', '/config.js',
-  '/js/app.js', '/js/api.js', '/js/storage.js',
+  '/js/app.js', '/js/api.js', '/js/storage.js', '/js/diag.js',
   '/js/screens/today.js', '/js/screens/log.js', '/js/screens/stats.js', '/js/screens/profile.js',
   '/js/components/timer.js', '/js/components/numpad.js'
 ];
@@ -35,5 +35,19 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request).catch(() => caches.match('/index.html')));
     return;
   }
-  e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request)));
+  // Network-first for the app's own code. Cache-first meant a device kept
+  // serving whatever JS it had cached until the cache name changed, so there
+  // was no way to tell which build a phone was actually running. The cache is
+  // still the offline fallback, and it is refreshed on every successful fetch.
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
 });

@@ -1,4 +1,5 @@
 // js/app.js
+import './diag.js';   // first, so its error handlers are up before anything runs
 import {initToday} from './screens/today.js';
 import {initLog, setCurrentExercise} from './screens/log.js';
 import {initStats} from './screens/stats.js';
