@@ -1,5 +1,5 @@
 // sw.js
-const CACHE = 'fitcoach-v43';
+const CACHE = 'fitcoach-v44';
 const STATIC = [
   '/css/app.css', '/manifest.json', '/config.js',
   '/js/app.js', '/js/api.js', '/js/storage.js', '/js/diag.js',
@@ -8,7 +8,11 @@ const STATIC = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)));
+  // addAll() would read these through the HTTP cache, so a new worker could
+  // install a stale copy of the very files it exists to update.
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(
+    STATIC.map(url => fetch(url, {cache: 'reload'}).then(res => res.ok && c.put(url, res)))
+  )));
   self.skipWaiting();
 });
 
@@ -39,8 +43,13 @@ self.addEventListener('fetch', e => {
   // serving whatever JS it had cached until the cache name changed, so there
   // was no way to tell which build a phone was actually running. The cache is
   // still the offline fallback, and it is refreshed on every successful fetch.
+  // Revalidate against the server rather than the browser's HTTP cache. Pages
+  // serves these with max-age=600, so a plain fetch() here kept handing back a
+  // ten-minute-old file and a freshly deployed fix looked like it had not
+  // shipped. 'no-cache' still allows a 304, so this costs a header round-trip,
+  // not a re-download.
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, {cache: 'no-cache'})
       .then(res => {
         if (res && res.ok) {
           const copy = res.clone();
