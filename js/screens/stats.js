@@ -185,8 +185,11 @@ function renderFoodSection(today) {
           <input id="food-desc" class="food-input" type="text" placeholder="例：雞胸便當、燕麥牛奶">
         </div>
 
-        <input type="file" id="food-image-input" accept="image/*" capture="environment" style="display:none">
-        <button class="btn-camera" id="camera-btn">📷 拍照 AI 辨識</button>
+        <!-- No capture attribute: it forces the camera and hides the library,
+             which is no use for a meal photographed earlier. Without it iOS
+             offers 拍照 / 照片圖庫 / 選擇檔案 from the one button. -->
+        <input type="file" id="food-image-input" accept="image/*" style="display:none">
+        <button class="btn-camera" id="camera-btn">📷 拍照或選圖 AI 辨識</button>
         <button class="btn-ai-text" id="ai-text-btn">🤖 AI 分析文字</button>
         <div id="ai-status" class="ai-status-msg" style="display:none"></div>
 
@@ -314,7 +317,7 @@ function bindFoodForm(today) {
       btn.textContent = '✅ 辨識完成';
       status.textContent = '數據已填入，請確認後送出';
     } catch (err) {
-      btn.textContent = '📷 重新拍照';
+      btn.textContent = '📷 重新選擇照片';
       status.textContent = `⚠️ ${err.message || 'AI 暫時無法使用'}— 請手動填寫下方數值`;
       console.error('[FitCoach] recognizeFood failed:', err);
       document.getElementById('food-cal').focus();

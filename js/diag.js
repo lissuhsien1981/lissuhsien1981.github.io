@@ -3,7 +3,7 @@
 // localStorage, so a freeze can be read back after the app is restarted.
 // Imported first in app.js so the handlers are up before anything else runs.
 
-export const BUILD = '2026-08-26.4';
+export const BUILD = '2026-08-26.5';
 
 const LOG_KEY = 'fitcoach-diag-log';
 const MAX_ENTRIES = 60;   // taps fill this quickly; keep enough to span a freeze
@@ -117,33 +117,10 @@ function bumpTaps() {
 }
 export function tapCount() { try { return +localStorage.getItem(TAP_KEY) || 0; } catch { return 0; } }
 
-// The readout has to live on the screen that fails: if the page can't be
-// scrolled or tapped, navigating to 設定 to read a log is exactly the thing
-// that isn't working. Fixed to the top so it shows even when nothing scrolls.
-let strip, lastTap = '-';
-function ensureStrip() {
-  if (strip) return strip;
-  strip = document.createElement('div');
-  strip.id = 'diag-strip';
-  strip.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;' +
-    'background:rgba(232,255,71,0.92);color:#000;font:600 10px/1.35 ui-monospace,Menlo,monospace;' +
-    'padding:3px 6px;white-space:pre-wrap;pointer-events:none;text-align:left';
-  document.body.appendChild(strip);
-  return strip;
-}
-
-function updateStrip() {
-  const el = ensureStrip();
-  const s = document.querySelector('.screen.active');
-  const scrollable = s ? s.scrollHeight - s.clientHeight : 0;
-  el.textContent =
-    `${BUILD} | scroll ${s ? s.scrollTop : '-'}/${scrollable} (content ${s ? s.scrollHeight : '-'} vs ${s ? s.clientHeight : '-'})\n` +
-    `taps ${tapCount()} | last ${lastTap}`;
-}
-
-addEventListener('touchmove', updateStrip, true);
-addEventListener('scroll', updateStrip, true);
-setInterval(updateStrip, 1000);
+// The always-on strip that found the scroll bug is gone; the 設定 panel keeps
+// the same data for the next time something needs diagnosing.
+let lastTap = '-';
+function updateStrip() { /* strip removed — kept as a no-op call site */ }
 
 function bytes(n) { return n < 1024 ? n + ' B' : (n / 1024).toFixed(1) + ' KB'; }
 
@@ -197,7 +174,9 @@ export async function snapshot() {
   lines.push(`full-screen layers: ${overlays.join(', ') || 'none'}`);
 
   const log = read();
-  lines.push(`taps since install: ${tapCount()} (survives clear)`);
+  const s = document.querySelector('.screen.active');
+  if (s) lines.push(`active screen: ${s.id} scroll ${s.scrollTop}/${s.scrollHeight - s.clientHeight}`);
+  lines.push(`taps since install: ${tapCount()} | last ${lastTap}`);
   lines.push(`--- events: ${log.length} ---`);
   log.slice(-16).forEach(e => lines.push(`${e.t.slice(11, 19)} [${e.kind}] ${e.detail}`));
 
