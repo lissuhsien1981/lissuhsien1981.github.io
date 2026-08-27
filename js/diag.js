@@ -3,7 +3,9 @@
 // localStorage, so a freeze can be read back after the app is restarted.
 // Imported first in app.js so the handlers are up before anything else runs.
 
-export const BUILD = '2026-08-26.5';
+import {api} from './api.js';
+
+export const BUILD = '2026-08-27.1';
 
 const LOG_KEY = 'fitcoach-diag-log';
 const MAX_ENTRIES = 60;   // taps fill this quickly; keep enough to span a freeze
@@ -123,6 +125,52 @@ let lastTap = '-';
 function updateStrip() { /* strip removed — kept as a no-op call site */ }
 
 function bytes(n) { return n < 1024 ? n + ' B' : (n / 1024).toFixed(1) + ' KB'; }
+
+// While the worker answered failed POSTs with [] and ok:true, a meal could be
+// written to the local cache and reported as saved without ever reaching the
+// sheet. Those entries are still in localStorage, so the two can be compared —
+// anything local that the sheet doesn't have is a write that was lost.
+export async function reconcile(onProgress) {
+  const dates = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    const m = k && k.match(/^fitcoach-food-cache-(\d{4}-\d{2}-\d{2})$/);
+    if (!m) continue;
+    let entries = [];
+    try { entries = JSON.parse(localStorage.getItem(k) || '[]'); } catch {}
+    if (entries.length) dates.push({date: m[1], entries});
+  }
+  dates.sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!dates.length) return '本機沒有任何飲食快取，無法比對。';
+
+  const out = [`比對 ${dates.length} 天...`];
+  let missingTotal = 0;
+
+  for (let i = 0; i < dates.length; i++) {
+    const {date, entries} = dates[i];
+    if (onProgress) onProgress(`比對中 ${i + 1}/${dates.length}：${date}`);
+    let remote;
+    try {
+      remote = await api.getTodayFood(date);
+      if (!Array.isArray(remote)) throw new Error('bad response');
+    } catch (e) {
+      out.push(`${date}  本機 ${entries.length}  雲端 讀取失敗`);
+      continue;
+    }
+    const remoteDesc = remote.map(r => String(r.description || '').trim());
+    const missing = entries.filter(e => !remoteDesc.includes(String(e.description || '').trim()));
+    missingTotal += missing.length;
+    if (missing.length) {
+      out.push(`${date}  本機 ${entries.length}  雲端 ${remote.length}  缺 ${missing.length}:`);
+      missing.forEach(m => out.push(`   · ${m.meal} ${m.description} ${m.calories || '?'}kcal`));
+    } else {
+      out.push(`${date}  本機 ${entries.length}  雲端 ${remote.length}  ✓`);
+    }
+  }
+  out.push(missingTotal ? `\n合計 ${missingTotal} 筆本機有、雲端沒有。` : '\n沒有缺漏。');
+  return out.join('\n');
+}
 
 export async function snapshot() {
   const lines = [];
