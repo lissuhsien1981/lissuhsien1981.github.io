@@ -6,13 +6,43 @@ const TIMEOUT_MS = 20000;
 // AI calls run a model round-trip, so they get a longer leash.
 const AI_TIMEOUT_MS = 60000;
 
+// The access token used to sit in config.js, which GitHub Pages serves to
+// anyone. Each device now keeps its own copy in localStorage, entered once.
+const TOKEN_KEY = 'fc_token';
+let asked = false;
+
+function getToken() {
+  let token = localStorage.getItem(TOKEN_KEY);
+  // Ask at most once per page load, so a cancelled prompt doesn't come back
+  // for every request a screen fires off.
+  if (!token && !asked) {
+    asked = true;
+    token = (window.prompt('請輸入 FitCoach 存取權杖') || '').trim();
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+  }
+  return token || '';
+}
+
+// A wrong or rotated token comes back as a 200 with {error: 'Unauthorized'}.
+// Forget it so the next call asks again, and throw so callers treat it as a
+// failed request: logSet then goes to the offline queue instead of being
+// counted as synced, and 已連結 ✓ isn't shown for a rejected token.
+function checkAuth(data) {
+  if (data && data.error === 'Unauthorized') {
+    localStorage.removeItem(TOKEN_KEY);
+    asked = false;
+    throw new Error('Unauthorized');
+  }
+  return data;
+}
+
 export async function apiFetch(params, timeout = TIMEOUT_MS) {
   const url = new URL(CONFIG.apiUrl);
-  url.searchParams.set('token', CONFIG.token);
+  url.searchParams.set('token', getToken());
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString(), {redirect: 'follow', signal: AbortSignal.timeout(timeout)});
   if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  return checkAuth(await res.json());
 }
 
 export async function apiPost(body, timeout = TIMEOUT_MS) {
@@ -20,10 +50,10 @@ export async function apiPost(body, timeout = TIMEOUT_MS) {
     method: 'POST',
     redirect: 'follow',
     signal: AbortSignal.timeout(timeout),
-    body: JSON.stringify({token: CONFIG.token, ...body})
+    body: JSON.stringify({token: getToken(), ...body})
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  return checkAuth(await res.json());
 }
 
 export const api = {

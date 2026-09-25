@@ -1,5 +1,5 @@
 const SHEET_ID = '1bOALXfJiVJotOzz34MFrVMn6r7e45u__P-cStSS6F0U';
-const SECRET = 'fitcoach-secret-2026';
+const SECRET = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
 
 // Pinned on purpose. The gemini-flash-lite-latest alias gets hot-swapped by
 // Google with every Flash-Lite release, which is how the food AI kept breaking
@@ -222,7 +222,7 @@ function populatePlanUpperOnly() {
 }
 
 function doGet(e) {
-  if (e.parameter.token !== SECRET) return json({error: 'Unauthorized'});
+  if (!SECRET || e.parameter.token !== SECRET) return json({error: 'Unauthorized'});
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const action = e.parameter.action;
   if (action === 'getTodayWorkout') return getTodayWorkout(ss, e.parameter.day);
@@ -235,7 +235,7 @@ function doGet(e) {
 
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
-  if (data.token !== SECRET) return json({error: 'Unauthorized'});
+  if (!SECRET || data.token !== SECRET) return json({error: 'Unauthorized'});
   const ss = SpreadsheetApp.openById(SHEET_ID);
   if (data.action === 'logSet') return logSet(ss, data);
   if (data.action === 'logBody') return logBody(ss, data);
