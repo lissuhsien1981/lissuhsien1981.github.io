@@ -5,3 +5,6 @@
 .playwright-mcp/
 .wrangler/
 .remember/
+
+# Apps Script source is private (origin only)
+google-apps-script/
